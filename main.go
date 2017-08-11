@@ -1,33 +1,47 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/la0rg/highloadcup/model"
+	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
 	log "github.com/sirupsen/logrus"
 )
 
-// usersData is inmemory user storage
-var usersData map[int32]model.User
+var dataStore = store.NewStore()
 
 func main() {
 	router := httprouter.New()
 
-	// init inmemory store
-	usersData = make(map[int32]model.User)
-
 	// import static data
-	err := util.ImportDataFromZip(usersData)
+	err := util.ImportDataFromZip(dataStore)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	routing(router)
-	log.Fatal(http.ListenAndServe(":80", router))
+
+	// graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	h := &http.Server{Addr: ":80", Handler: router}
+	go func() {
+		log.Fatal(h.ListenAndServe())
+	}()
+
+	<-stop
+	log.Info("Shutting down the server...")
+	ctx, cn := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cn()
+	h.Shutdown(ctx)
 }
 
 func routing(router *httprouter.Router) {
@@ -47,13 +61,13 @@ func Users(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
-	user, ok := usersData[id]
+	user, ok := dataStore.GetUserByID(id)
 	if ok {
-		err = writeStructAsJSON(w, user)
+		err = writeStructAsJSON(w, &user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
+		return
 	}
 
 	http.Error(w, "", http.StatusNotFound)

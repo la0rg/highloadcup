@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"github.com/la0rg/highloadcup/model"
+	"github.com/la0rg/highloadcup/store"
 	log "github.com/sirupsen/logrus"
 )
 
 var errUnsupportedFile = errors.New("Imported file is not supported")
 
-func ImportDataFromZip(usersData map[int32]model.User) error {
+func ImportDataFromZip(store *store.Store) error {
 	r, err := zip.OpenReader("/tmp/data/data.zip")
 	if err != nil {
 		return err
@@ -50,11 +51,10 @@ func ImportDataFromZip(usersData map[int32]model.User) error {
 		if err != nil {
 			return err
 		}
-		log.Infof("File content is %v", string(bytes))
 
 		switch parts[0] {
 		case "users":
-			err = importUsers(bytes, usersData)
+			err = importUsers(bytes, store)
 			if err != nil {
 				return err
 			}
@@ -67,14 +67,14 @@ func ImportDataFromZip(usersData map[int32]model.User) error {
 	return nil
 }
 
-func importUsers(b []byte, usersData map[int32]model.User) error {
+func importUsers(b []byte, store *store.Store) error {
 	var users model.UserArray
 	err := json.Unmarshal(b, &users)
 	if err != nil {
 		return err
 	}
 	for _, u := range users.Users {
-		usersData[u.ID] = u
+		store.AddUser(u)
 	}
 	return nil
 }
