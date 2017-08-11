@@ -55,13 +55,13 @@ func ImportDataFromZip(store *store.Store) error {
 		switch parts[0] {
 		case "users":
 			err = importUsers(bytes, store)
-			if err != nil {
-				return err
-			}
 		case "locations":
-			//parse locations
+			err = importLocations(bytes, store)
 		case "visits":
-			// parse locations
+			err = importVisits(bytes, store)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -75,6 +75,30 @@ func importUsers(b []byte, store *store.Store) error {
 	}
 	for _, u := range users.Users {
 		store.AddUser(u)
+	}
+	return nil
+}
+
+func importLocations(b []byte, store *store.Store) error {
+	var locations model.LocationArray
+	err := json.Unmarshal(b, &locations)
+	if err != nil {
+		return err
+	}
+	for _, l := range locations.Locations {
+		store.AddLocation(l)
+	}
+	return nil
+}
+
+func importVisits(b []byte, store *store.Store) error {
+	var visits model.VisitArray
+	err := json.Unmarshal(b, &visits)
+	if err != nil {
+		return err
+	}
+	for _, v := range visits.Visits {
+		store.AddVisit(v)
 	}
 	return nil
 }

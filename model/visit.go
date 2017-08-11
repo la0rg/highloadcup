@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Visit of a user on certain place with rating
 type Visit struct {
@@ -14,4 +17,32 @@ type Visit struct {
 // VisitArray is a list of visits
 type VisitArray struct {
 	Visits []Visit `json:"visits"`
+}
+
+// MarshalJSON custom marshaller for Visit that converts time struct to timestamp
+func (v *Visit) MarshalJSON() ([]byte, error) {
+	type AliasVisit Visit
+	return json.Marshal(struct {
+		*AliasVisit
+		VisitedAt int64 `json:"visited_at"`
+	}{
+		AliasVisit: (*AliasVisit)(v),
+		VisitedAt:  v.VisitedAt.Unix(),
+	})
+}
+
+// UnmarshalJSON custom unmarshaller for Visit that converts timestamp to time struct
+func (v *Visit) UnmarshalJSON(data []byte) error {
+	type AliasVisit Visit
+	aux := &struct {
+		VisitedAt int64 `json:"visited_at"`
+		*AliasVisit
+	}{
+		AliasVisit: (*AliasVisit)(v),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	v.VisitedAt = time.Unix(aux.VisitedAt, 0)
+	return nil
 }
