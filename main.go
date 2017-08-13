@@ -17,6 +17,9 @@ var dataStore = store.NewStore()
 
 func main() {
 	router := httprouter.New()
+	router.RedirectTrailingSlash = false
+	router.RedirectFixedPath = false
+	router.NotFound = NotFound
 
 	// import static data
 	err := util.ImportDataFromZip(dataStore)

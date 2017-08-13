@@ -35,11 +35,15 @@ func (s *Store) AddUser(user model.User) {
 
 // GetUserByID find user by id
 // returns user and existence flag (map like)
-func (s *Store) GetUserByID(id int32) (model.User, bool) {
+func (s *Store) GetUserByID(id int32) (*model.User, bool) {
+	var result model.User
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	u, ok := s.usersByID[id]
-	return *u, ok // return copy of the object pointed by u
+	if ok {
+		result = *u // return copy of the object pointed by u
+	}
+	return &result, ok
 }
 
 // AddLocation adds new location to the store
@@ -50,11 +54,15 @@ func (s *Store) AddLocation(location model.Location) {
 }
 
 // GetLocationByID find location by id
-func (s *Store) GetLocationByID(id int32) (model.Location, bool) {
+func (s *Store) GetLocationByID(id int32) (*model.Location, bool) {
+	var result model.Location
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	l, ok := s.locationsByID[id]
-	return *l, ok
+	if ok {
+		result = *l
+	}
+	return &result, ok
 }
 
 // AddVisit adds new visit to the store
@@ -65,9 +73,13 @@ func (s *Store) AddVisit(visit model.Visit) {
 }
 
 // GetVisitByID find visit by id
-func (s *Store) GetVisitByID(id int32) (model.Visit, bool) {
+func (s *Store) GetVisitByID(id int32) (*model.Visit, bool) {
+	var result model.Visit
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.visitsByID[id]
-	return *v, ok
+	if ok {
+		result = *v
+	}
+	return &result, ok
 }

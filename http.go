@@ -63,6 +63,11 @@ func Visits(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	http.Error(w, "", http.StatusNotFound)
 }
 
+// NotFound custom request handler for non-found requests
+func NotFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+}
+
 func parseID(params httprouter.Params) (int32, error) {
 	errParse := errors.New("Could not parse Id from request")
 	strID := params.ByName("id")
