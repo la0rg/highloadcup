@@ -5,12 +5,12 @@ import "encoding/json"
 
 // User profile
 type User struct {
-	ID        int32     `json:"id"`
-	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Gender    string    `json:"gender"`
-	BirthDate time.Time `json:"birth_date"`
+	ID        *int32     `json:"id"`
+	Email     *string    `json:"email"`
+	FirstName *string    `json:"first_name"`
+	LastName  *string    `json:"last_name"`
+	Gender    *string    `json:"gender"`
+	BirthDate *time.Time `json:"birth_date"`
 }
 
 // UserArray is a list of users
@@ -42,6 +42,7 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, aux); err != nil {
 		return err
 	}
-	u.BirthDate = time.Unix(aux.BirthDate, 0)
+	timestamp := time.Unix(aux.BirthDate, 0)
+	u.BirthDate = &timestamp
 	return nil
 }

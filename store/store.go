@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/la0rg/highloadcup/model"
@@ -30,7 +31,7 @@ func NewStore() *Store {
 func (s *Store) AddUser(user model.User) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.usersByID[user.ID] = &user
+	s.usersByID[*(user.ID)] = &user
 }
 
 // GetUserByID find user by id
@@ -46,11 +47,38 @@ func (s *Store) GetUserByID(id int32) (*model.User, bool) {
 	return &result, ok
 }
 
+// UpdateUserByID updates user with id by user
+// if user does not exist returns error
+func (s *Store) UpdateUserByID(id int32, user model.User) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	u, ok := s.usersByID[id]
+	if !ok {
+		return fmt.Errorf("User with id:%d does not exist", id)
+	}
+	if user.BirthDate != nil {
+		u.BirthDate = user.BirthDate
+	}
+	if user.Email != nil {
+		u.Email = user.Email
+	}
+	if user.FirstName != nil {
+		u.FirstName = user.FirstName
+	}
+	if user.LastName != nil {
+		u.LastName = user.LastName
+	}
+	if user.Gender != nil {
+		u.Gender = user.Gender
+	}
+	return nil
+}
+
 // AddLocation adds new location to the store
 func (s *Store) AddLocation(location model.Location) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.locationsByID[location.ID] = &location
+	s.locationsByID[*(location.ID)] = &location
 }
 
 // GetLocationByID find location by id
@@ -65,11 +93,35 @@ func (s *Store) GetLocationByID(id int32) (*model.Location, bool) {
 	return &result, ok
 }
 
+// UpdateLocationByID updates location with id by user
+// if location does not exist returns error
+func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	l, ok := s.locationsByID[id]
+	if !ok {
+		return fmt.Errorf("Location with id:%d does not exist", id)
+	}
+	if location.City != nil {
+		l.City = location.City
+	}
+	if location.Country != nil {
+		l.Country = location.Country
+	}
+	if location.Distance != nil {
+		l.Distance = location.Distance
+	}
+	if location.Place != nil {
+		l.Place = location.Place
+	}
+	return nil
+}
+
 // AddVisit adds new visit to the store
 func (s *Store) AddVisit(visit model.Visit) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.visitsByID[visit.ID] = &visit
+	s.visitsByID[*(visit.ID)] = &visit
 }
 
 // GetVisitByID find visit by id
@@ -82,4 +134,28 @@ func (s *Store) GetVisitByID(id int32) (*model.Visit, bool) {
 		result = *v
 	}
 	return &result, ok
+}
+
+// UpdateVisitByID updates visit with id by visit
+// if visit does not exist returns error
+func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	v, ok := s.visitsByID[id]
+	if !ok {
+		return fmt.Errorf("Visit with id:%d does not exist", id)
+	}
+	if visit.LocationID != nil {
+		v.LocationID = visit.LocationID
+	}
+	if visit.Mark != nil {
+		v.Mark = visit.Mark
+	}
+	if visit.UserID != nil {
+		v.UserID = visit.UserID
+	}
+	if visit.VisitedAt != nil {
+		v.VisitedAt = visit.VisitedAt
+	}
+	return nil
 }

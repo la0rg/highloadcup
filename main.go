@@ -47,7 +47,12 @@ func main() {
 }
 
 func routing(router *httprouter.Router) {
-	router.GET("/users/:id", Users)
-	router.GET("/locations/:id", Locations)
-	router.GET("/visits/:id", Visits)
+	router.GET("/users/:id", User)
+	router.POST("/users/:id", UserUpdate)
+
+	router.GET("/locations/:id", Location)
+	router.POST("/locations/:id", LocationUpdate)
+
+	router.GET("/visits/:id", Visit)
+	router.POST("/visits/:id", VisitUpdate)
 }
