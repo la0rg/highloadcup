@@ -34,7 +34,7 @@ func (u *User) MarshalJSON() ([]byte, error) {
 func (u *User) UnmarshalJSON(data []byte) error {
 	type AliasUser User
 	aux := &struct {
-		BirthDate int64 `json:"birth_date"`
+		BirthDate *int64 `json:"birth_date"`
 		*AliasUser
 	}{
 		AliasUser: (*AliasUser)(u),
@@ -42,7 +42,9 @@ func (u *User) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, aux); err != nil {
 		return err
 	}
-	timestamp := time.Unix(aux.BirthDate, 0)
-	u.BirthDate = &timestamp
+	if aux.BirthDate != nil {
+		timestamp := time.Unix(*(aux.BirthDate), 0)
+		u.BirthDate = &timestamp
+	}
 	return nil
 }

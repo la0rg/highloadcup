@@ -35,7 +35,7 @@ func (v *Visit) MarshalJSON() ([]byte, error) {
 func (v *Visit) UnmarshalJSON(data []byte) error {
 	type AliasVisit Visit
 	aux := &struct {
-		VisitedAt int64 `json:"visited_at"`
+		VisitedAt *int64 `json:"visited_at"`
 		*AliasVisit
 	}{
 		AliasVisit: (*AliasVisit)(v),
@@ -43,7 +43,9 @@ func (v *Visit) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, aux); err != nil {
 		return err
 	}
-	timestamp := time.Unix(aux.VisitedAt, 0)
-	v.VisitedAt = &timestamp
+	if aux.VisitedAt != nil {
+		timestamp := time.Unix(*(aux.VisitedAt), 0)
+		v.VisitedAt = &timestamp
+	}
 	return nil
 }

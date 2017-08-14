@@ -2,15 +2,16 @@ package store
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/la0rg/highloadcup/model"
 )
 
 var (
-	errRequiredFields = errors.New("Not all required fields are filled")
-	errAlreadyExist   = errors.New("Already exist")
+	ErrRequiredFields = errors.New("Not all required fields are filled")
+	ErrAlreadyExist   = errors.New("Already exist")
+	ErrDoesNotExist   = errors.New("Does not exist")
+	ErrIDInUpdate     = errors.New("Update should not contain ID in the json object")
 )
 
 // Store is an object that keeps all the data (in memory)
@@ -37,13 +38,13 @@ func NewStore() *Store {
 func (s *Store) AddUser(user model.User) error {
 	if user.BirthDate == nil || user.Email == nil || user.FirstName == nil ||
 		user.LastName == nil || user.Gender == nil || user.ID == nil {
-		return errRequiredFields
+		return ErrRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.usersByID[*(user.ID)]
 	if ok {
-		return errAlreadyExist
+		return ErrAlreadyExist
 	}
 	s.usersByID[*(user.ID)] = &user
 	return nil
@@ -69,7 +70,10 @@ func (s *Store) UpdateUserByID(id int32, user model.User) error {
 	defer s.mx.Unlock()
 	u, ok := s.usersByID[id]
 	if !ok {
-		return fmt.Errorf("User with id:%d does not exist", id)
+		return ErrDoesNotExist
+	}
+	if user.ID != nil {
+		return ErrIDInUpdate
 	}
 	if user.BirthDate != nil {
 		u.BirthDate = user.BirthDate
@@ -93,13 +97,13 @@ func (s *Store) UpdateUserByID(id int32, user model.User) error {
 func (s *Store) AddLocation(location model.Location) error {
 	if location.City == nil || location.Country == nil || location.Distance == nil ||
 		location.ID == nil || location.Place == nil {
-		return errRequiredFields
+		return ErrRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.locationsByID[*(location.ID)]
 	if ok {
-		return errAlreadyExist
+		return ErrAlreadyExist
 	}
 	s.locationsByID[*(location.ID)] = &location
 	return nil
@@ -124,7 +128,10 @@ func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
 	defer s.mx.Unlock()
 	l, ok := s.locationsByID[id]
 	if !ok {
-		return fmt.Errorf("Location with id:%d does not exist", id)
+		return ErrDoesNotExist
+	}
+	if location.ID != nil {
+		return ErrIDInUpdate
 	}
 	if location.City != nil {
 		l.City = location.City
@@ -145,13 +152,13 @@ func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
 func (s *Store) AddVisit(visit model.Visit) error {
 	if visit.ID == nil || visit.LocationID == nil ||
 		visit.UserID == nil || visit.Mark == nil || visit.VisitedAt == nil {
-		return errRequiredFields
+		return ErrRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.visitsByID[*(visit.ID)]
 	if ok {
-		return errAlreadyExist
+		return ErrAlreadyExist
 	}
 	s.visitsByID[*(visit.ID)] = &visit
 	return nil
@@ -176,7 +183,10 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 	defer s.mx.Unlock()
 	v, ok := s.visitsByID[id]
 	if !ok {
-		return fmt.Errorf("Visit with id:%d does not exist", id)
+		return ErrDoesNotExist
+	}
+	if visit.ID != nil {
+		return ErrIDInUpdate
 	}
 	if visit.LocationID != nil {
 		v.LocationID = visit.LocationID

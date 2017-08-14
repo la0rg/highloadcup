@@ -7,16 +7,17 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/la0rg/highloadcup/store"
+
 	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
-	log "github.com/sirupsen/logrus"
 )
 
 // User returns a user by id
 func User(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 	user, ok := dataStore.GetUserByID(id)
@@ -35,11 +36,9 @@ func User(w http.ResponseWriter, r *http.Request) {
 // id is not found - 404
 // incorrect request - 400
 func UserUpdate(w http.ResponseWriter, r *http.Request) {
-	log.Info("User update")
 	id, err := parseID(r)
 	if err != nil {
-		log.Info("Id parsing failed")
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 
@@ -57,7 +56,11 @@ func UserUpdate(w http.ResponseWriter, r *http.Request) {
 	err = dataStore.UpdateUserByID(id, user)
 	// 404 is a higher priority than 400
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		if err == store.ErrDoesNotExist {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 	if errParse != nil {
@@ -96,7 +99,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 func Location(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 	location, ok := dataStore.GetLocationByID(id)
@@ -117,7 +120,7 @@ func Location(w http.ResponseWriter, r *http.Request) {
 func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 
@@ -134,7 +137,11 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	err = dataStore.UpdateLocationByID(id, location)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		if err == store.ErrDoesNotExist {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 	if errParse != nil {
@@ -173,7 +180,7 @@ func LocationCreate(w http.ResponseWriter, r *http.Request) {
 func Visit(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 	visit, ok := dataStore.GetVisitByID(id)
@@ -194,7 +201,7 @@ func Visit(w http.ResponseWriter, r *http.Request) {
 func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusBadRequest)
+		http.Error(w, "", http.StatusNotFound)
 		return
 	}
 
@@ -212,7 +219,11 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 	err = dataStore.UpdateVisitByID(id, visit)
 	// 404 is a higher priority than 400
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		if err == store.ErrDoesNotExist {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
 		return
 	}
 	if errParse != nil {
