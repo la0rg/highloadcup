@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
+	log "github.com/sirupsen/logrus"
 )
 
 // User returns a user by id
@@ -34,8 +35,10 @@ func User(w http.ResponseWriter, r *http.Request) {
 // id is not found - 404
 // incorrect request - 400
 func UserUpdate(w http.ResponseWriter, r *http.Request) {
+	log.Info("User update")
 	id, err := parseID(r)
 	if err != nil {
+		log.Info("Id parsing failed")
 		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
@@ -141,6 +144,31 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("{}"))
 }
 
+// LocationCreate create location entity
+// success - 200 with body {}
+// already exist - 400
+// incorrect request - 400
+func LocationCreate(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var location model.Location
+	err = json.Unmarshal(bytes, &location)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = dataStore.AddLocation(location)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.Write([]byte("{}"))
+}
+
 // Visit returns a visit by id
 func Visit(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
@@ -188,6 +216,31 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if errParse != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.Write([]byte("{}"))
+}
+
+// VisitCreate create location entity
+// success - 200 with body {}
+// already exist - 400
+// incorrect request - 400
+func VisitCreate(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var visit model.Visit
+	err = json.Unmarshal(bytes, &visit)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = dataStore.AddVisit(visit)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -17,6 +17,7 @@ var dataStore = store.NewStore()
 
 func main() {
 	router := mux.NewRouter()
+	router.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	// import static data
 	err := util.ImportDataFromZip(dataStore)
@@ -44,13 +45,15 @@ func main() {
 }
 
 func routing(router *mux.Router) {
-	router.HandleFunc("/users/{id:[0-9]+}", User).Methods("GET")
+	router.HandleFunc("/users/{id}", User).Methods("GET")
 	router.HandleFunc("/users/new", UserCreate).Methods("POST")
 	router.HandleFunc("/users/{id}", UserUpdate).Methods("POST")
 
-	router.HandleFunc("/locations/{id:[0-9]+}", Location).Methods("GET")
-	router.HandleFunc("/locations/{id:[0-9]+}", LocationUpdate).Methods("POST")
+	router.HandleFunc("/locations/{id}", Location).Methods("GET")
+	router.HandleFunc("/locations/new", LocationCreate).Methods("POST")
+	router.HandleFunc("/locations/{id}", LocationUpdate).Methods("POST")
 
-	router.HandleFunc("/visits/{id:[0-9]+}", Visit).Methods("GET")
-	router.HandleFunc("/visits/{id:[0-9]+}", VisitUpdate).Methods("POST")
+	router.HandleFunc("/visits/{id}", Visit).Methods("GET")
+	router.HandleFunc("/visits/new", VisitCreate).Methods("POST")
+	router.HandleFunc("/visits/{id}", VisitUpdate).Methods("POST")
 }

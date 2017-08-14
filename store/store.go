@@ -8,6 +8,11 @@ import (
 	"github.com/la0rg/highloadcup/model"
 )
 
+var (
+	errRequiredFields = errors.New("Not all required fields are filled")
+	errAlreadyExist   = errors.New("Already exist")
+)
+
 // Store is an object that keeps all the data (in memory)
 // and provides all the aggregation functions
 type Store struct {
@@ -32,13 +37,13 @@ func NewStore() *Store {
 func (s *Store) AddUser(user model.User) error {
 	if user.BirthDate == nil || user.Email == nil || user.FirstName == nil ||
 		user.LastName == nil || user.Gender == nil || user.ID == nil {
-		return errors.New("Not all required fields are filled")
+		return errRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.usersByID[*(user.ID)]
 	if ok {
-		return errors.New("User already exist")
+		return errAlreadyExist
 	}
 	s.usersByID[*(user.ID)] = &user
 	return nil
@@ -85,10 +90,19 @@ func (s *Store) UpdateUserByID(id int32, user model.User) error {
 }
 
 // AddLocation adds new location to the store
-func (s *Store) AddLocation(location model.Location) {
+func (s *Store) AddLocation(location model.Location) error {
+	if location.City == nil || location.Country == nil || location.Distance == nil ||
+		location.ID == nil || location.Place == nil {
+		return errRequiredFields
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
+	_, ok := s.locationsByID[*(location.ID)]
+	if ok {
+		return errAlreadyExist
+	}
 	s.locationsByID[*(location.ID)] = &location
+	return nil
 }
 
 // GetLocationByID find location by id
@@ -128,10 +142,19 @@ func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
 }
 
 // AddVisit adds new visit to the store
-func (s *Store) AddVisit(visit model.Visit) {
+func (s *Store) AddVisit(visit model.Visit) error {
+	if visit.ID == nil || visit.LocationID == nil ||
+		visit.UserID == nil || visit.Mark == nil || visit.VisitedAt == nil {
+		return errRequiredFields
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
+	_, ok := s.visitsByID[*(visit.ID)]
+	if ok {
+		return errAlreadyExist
+	}
 	s.visitsByID[*(visit.ID)] = &visit
+	return nil
 }
 
 // GetVisitByID find visit by id
