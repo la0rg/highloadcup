@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,10 @@ func (v *Visit) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON custom unmarshaller for Visit that converts timestamp to time struct
 func (v *Visit) UnmarshalJSON(data []byte) error {
+	// hot fix: do not allow null as a value
+	if strings.Contains(string(data), ": null") {
+		return ErrNullField
+	}
 	type AliasVisit Visit
 	aux := &struct {
 		VisitedAt *int64 `json:"visited_at"`

@@ -1,7 +1,13 @@
 package model
 
-import "time"
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+	"strings"
+	"time"
+)
+
+var ErrNullField = errors.New("Field value is null")
 
 // User profile
 type User struct {
@@ -32,6 +38,11 @@ func (u *User) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON custom unmarshaller for User that converts timestamp to time struct
 func (u *User) UnmarshalJSON(data []byte) error {
+	// hot fix: do not allow null as a value
+	if strings.Contains(string(data), ": null") {
+		return ErrNullField
+	}
+
 	type AliasUser User
 	aux := &struct {
 		BirthDate *int64 `json:"birth_date"`
