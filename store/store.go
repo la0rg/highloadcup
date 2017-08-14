@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -28,10 +29,19 @@ func NewStore() *Store {
 }
 
 // AddUser adds new user to the store
-func (s *Store) AddUser(user model.User) {
+func (s *Store) AddUser(user model.User) error {
+	if user.BirthDate == nil || user.Email == nil || user.FirstName == nil ||
+		user.LastName == nil || user.Gender == nil || user.ID == nil {
+		return errors.New("Not all required fields are filled")
+	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
+	_, ok := s.usersByID[*(user.ID)]
+	if ok {
+		return errors.New("User already exist")
+	}
 	s.usersByID[*(user.ID)] = &user
+	return nil
 }
 
 // GetUserByID find user by id

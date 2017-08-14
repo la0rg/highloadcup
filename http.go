@@ -7,14 +7,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 // User returns a user by id
-func User(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func User(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -34,8 +33,8 @@ func User(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func UserUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func UserUpdate(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -62,11 +61,37 @@ func UserUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Write([]byte("{}"))
+}
+
+// UserCreate create user entity
+// success - 200 with body {}
+// already exist - 400
+// incorrect request - 400
+func UserCreate(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var user model.User
+	err = json.Unmarshal(bytes, &user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = dataStore.AddUser(user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.Write([]byte("{}"))
 }
 
 // Location returns a location by id
-func Location(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func Location(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -86,8 +111,8 @@ func Location(w http.ResponseWriter, r *http.Request, params httprouter.Params) 
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func LocationUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func LocationUpdate(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -113,11 +138,12 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Pa
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Write([]byte("{}"))
 }
 
 // Visit returns a visit by id
-func Visit(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func Visit(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -137,8 +163,8 @@ func Visit(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func VisitUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	id, err := parseID(params)
+func VisitUpdate(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -165,6 +191,7 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request, params httprouter.Param
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Write([]byte("{}"))
 }
 
 // NotFound custom request handler for non-found requests
@@ -172,10 +199,11 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-func parseID(params httprouter.Params) (int32, error) {
+func parseID(r *http.Request) (int32, error) {
 	errParse := errors.New("Could not parse Id from request")
-	strID := params.ByName("id")
-	if strID == "" {
+	vars := mux.Vars(r)
+	strID, ok := vars["id"]
+	if !ok {
 		return 0, errParse
 	}
 	id64, err := strconv.ParseInt(strID, 10, 32)

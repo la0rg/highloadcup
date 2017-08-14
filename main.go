@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
 	log "github.com/sirupsen/logrus"
@@ -16,10 +16,7 @@ import (
 var dataStore = store.NewStore()
 
 func main() {
-	router := httprouter.New()
-	router.RedirectTrailingSlash = false
-	router.RedirectFixedPath = false
-	router.NotFound = NotFound
+	router := mux.NewRouter()
 
 	// import static data
 	err := util.ImportDataFromZip(dataStore)
@@ -46,13 +43,14 @@ func main() {
 	h.Shutdown(ctx)
 }
 
-func routing(router *httprouter.Router) {
-	router.GET("/users/:id", User)
-	router.POST("/users/:id", UserUpdate)
+func routing(router *mux.Router) {
+	router.HandleFunc("/users/{id:[0-9]+}", User).Methods("GET")
+	router.HandleFunc("/users/new", UserCreate).Methods("POST")
+	router.HandleFunc("/users/{id}", UserUpdate).Methods("POST")
 
-	router.GET("/locations/:id", Location)
-	router.POST("/locations/:id", LocationUpdate)
+	router.HandleFunc("/locations/{id:[0-9]+}", Location).Methods("GET")
+	router.HandleFunc("/locations/{id:[0-9]+}", LocationUpdate).Methods("POST")
 
-	router.GET("/visits/:id", Visit)
-	router.POST("/visits/:id", VisitUpdate)
+	router.HandleFunc("/visits/{id:[0-9]+}", Visit).Methods("GET")
+	router.HandleFunc("/visits/{id:[0-9]+}", VisitUpdate).Methods("POST")
 }
