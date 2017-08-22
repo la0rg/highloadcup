@@ -6,8 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/la0rg/highloadcup/store"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
@@ -22,7 +24,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 	}
 	user, ok := dataStore.GetUserByID(id)
 	if ok {
-		err = writeStructAsJSON(w, &user)
+		err = writeStructAsJSON(w, user)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -104,7 +106,7 @@ func Location(w http.ResponseWriter, r *http.Request) {
 	}
 	location, ok := dataStore.GetLocationByID(id)
 	if ok {
-		err = writeStructAsJSON(w, &location)
+		err = writeStructAsJSON(w, location)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -185,7 +187,53 @@ func Visit(w http.ResponseWriter, r *http.Request) {
 	}
 	visit, ok := dataStore.GetVisitByID(id)
 	if ok {
-		err = writeStructAsJSON(w, &visit)
+		err = writeStructAsJSON(w, visit)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	http.Error(w, "", http.StatusNotFound)
+}
+
+func VisitsByUser(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		http.Error(w, "", http.StatusNotFound)
+		return
+	}
+
+	var fromDate, toDate *time.Time
+	var country *string
+	keys, ok := r.URL.Query()["fromDate"]
+	if ok && len(keys) >= 1 {
+		i64, err := strconv.ParseInt(keys[0], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := time.Unix(i64, 0)
+		fromDate = &date
+	}
+	keys, ok = r.URL.Query()["toDate"]
+	if ok && len(keys) >= 1 {
+		i64, err := strconv.ParseInt(keys[0], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := time.Unix(i64, 0)
+		toDate = &date
+	}
+	keys, ok = r.URL.Query()["country"]
+	if ok && len(keys) >= 1 {
+		country = &(keys[0])
+		log.Infof("Country %s", *country)
+	}
+
+	visits, ok := dataStore.GetVisitsByUserID(id, fromDate, toDate, country)
+	if ok {
+		err = writeStructAsJSON(w, visits)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

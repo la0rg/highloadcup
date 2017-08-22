@@ -10,7 +10,9 @@ import (
 type Visit struct {
 	ID         *int32     `json:"id,omitempty"`
 	LocationID *int32     `json:"location"`
+	Location   *Location  `json:"-"`
 	UserID     *int32     `json:"user"`
+	User       *User      `json:"-"`
 	VisitedAt  *time.Time `json:"visited_at"`
 	Mark       *uint8     `json:"mark"`
 }

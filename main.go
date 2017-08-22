@@ -48,6 +48,7 @@ func routing(router *mux.Router) {
 	router.HandleFunc("/users/{id}", User).Methods("GET")
 	router.HandleFunc("/users/new", UserCreate).Methods("POST")
 	router.HandleFunc("/users/{id}", UserUpdate).Methods("POST")
+	router.HandleFunc("/users/{id}/visits", VisitsByUser).Methods("GET")
 
 	router.HandleFunc("/locations/{id}", Location).Methods("GET")
 	router.HandleFunc("/locations/new", LocationCreate).Methods("POST")
