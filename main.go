@@ -20,10 +20,12 @@ func main() {
 	router.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	// import static data
+	start := time.Now()
 	err := util.ImportDataFromZip(dataStore)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Infof("Time to load data.zip: %v", time.Since(start))
 
 	// set up routes
 	routing(router)

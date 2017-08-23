@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/la0rg/highloadcup/store"
-	log "github.com/sirupsen/logrus"
+	"github.com/la0rg/highloadcup/util"
 
 	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
@@ -202,9 +202,15 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", http.StatusNotFound)
 		return
 	}
-
+	// // check if user does not exist
+	// _, ok := dataStore.GetUserByID(id)
+	// if !ok {
+	// 	w.WriteHeader(http.StatusNotFound)
+	// 	return
+	// }
 	var fromDate, toDate *time.Time
 	var country *string
+	var toDistance *int32
 	keys, ok := r.URL.Query()["fromDate"]
 	if ok && len(keys) >= 1 {
 		i64, err := strconv.ParseInt(keys[0], 10, 64)
@@ -228,10 +234,23 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 	keys, ok = r.URL.Query()["country"]
 	if ok && len(keys) >= 1 {
 		country = &(keys[0])
-		log.Infof("Country %s", *country)
+		if !util.OnlyLetters(*country) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+	keys, ok = r.URL.Query()["toDistance"]
+	if ok && len(keys) >= 1 {
+		i64, err := strconv.ParseInt(keys[0], 10, 32)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		i32 := int32(i64)
+		toDistance = &i32
 	}
 
-	visits, ok := dataStore.GetVisitsByUserID(id, fromDate, toDate, country)
+	visits, ok := dataStore.GetVisitsByUserID(id, fromDate, toDate, country, toDistance)
 	if ok {
 		err = writeStructAsJSON(w, visits)
 		if err != nil {
@@ -239,7 +258,7 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.Error(w, "", http.StatusNotFound)
+	w.WriteHeader(http.StatusNotFound)
 }
 
 // VisitUpdate update user entity
