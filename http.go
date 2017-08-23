@@ -115,6 +115,77 @@ func Location(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "", http.StatusNotFound)
 }
 
+// Location returns a location by id
+func LocationAvg(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	var fromDate, toDate, fromAge, toAge *time.Time
+	var gender *string
+	keys, ok := r.URL.Query()["fromDate"]
+	if ok && len(keys) >= 1 {
+		i64, err := strconv.ParseInt(keys[0], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := time.Unix(i64, 0)
+		fromDate = &date
+	}
+	keys, ok = r.URL.Query()["toDate"]
+	if ok && len(keys) >= 1 {
+		i64, err := strconv.ParseInt(keys[0], 10, 64)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := time.Unix(i64, 0)
+		toDate = &date
+	}
+	keys, ok = r.URL.Query()["fromAge"]
+	if ok && len(keys) >= 1 {
+		i, err := strconv.Atoi(keys[0])
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := now.AddDate(-i, 0, 0)
+		fromAge = &date
+	}
+	keys, ok = r.URL.Query()["toAge"]
+	if ok && len(keys) >= 1 {
+		i, err := strconv.Atoi(keys[0])
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		date := now.AddDate(-i, 0, 0)
+		toAge = &date
+	}
+	keys, ok = r.URL.Query()["gender"]
+	if ok && len(keys) >= 1 {
+		gender = &(keys[0])
+		if !util.IsGender(*gender) {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	avg, ok := dataStore.GetLocationAvg(id, fromDate, toDate, fromAge, toAge, gender)
+	if ok {
+		avg = util.RoundPlus(avg, 5)
+		err = writeStructAsJSON(w, model.Avg{Value: model.FloatPrec5(avg)})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
+}
+
 // LocationUpdate update location entity
 // success - 200 with body {}
 // id is not found - 404

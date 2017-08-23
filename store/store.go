@@ -2,7 +2,6 @@ package store
 
 import (
 	"errors"
-	"log"
 	"sync"
 	"time"
 
@@ -23,7 +22,7 @@ type Store struct {
 	usersByID          map[int32]*model.User
 	visitsByID         map[int32]*model.Visit
 	visitsByUserID     map[int32]*VisitIndex
-	visitsByLocationID map[int32]VisitList
+	visitsByLocationID map[int32]*VisitIndex
 	locationsByID      map[int32]*model.Location
 }
 
@@ -33,7 +32,7 @@ func NewStore() *Store {
 		usersByID:          make(map[int32]*model.User),
 		visitsByID:         make(map[int32]*model.Visit),
 		visitsByUserID:     make(map[int32]*VisitIndex),
-		visitsByLocationID: make(map[int32]VisitList),
+		visitsByLocationID: make(map[int32]*VisitIndex),
 		locationsByID:      make(map[int32]*model.Location),
 	}
 }
@@ -118,11 +117,14 @@ func (s *Store) AddLocation(location model.Location) error {
 	s.locationsByID[*(location.ID)] = &location
 
 	// update connections (if already exist to this entity)
-	vl, ok := s.visitsByLocationID[*(location.ID)]
+	vi, ok := s.visitsByLocationID[*(location.ID)]
 	if ok {
-		for visitPtr := range vl.Iter() {
-			visitPtr.Location = &location
-		}
+		vi.ApplyToAll(func(visit *model.Visit) {
+			visit.Location = &location
+		})
+	} else {
+		// initialize visitsByLocationID with empty index (to return 0 avg)
+		s.visitsByLocationID[*(location.ID)] = NewVisitIndex()
 	}
 	return nil
 }
@@ -137,6 +139,24 @@ func (s *Store) GetLocationByID(id int32) (*model.Location, bool) {
 		result = *l
 	}
 	return &result, ok
+}
+
+func (s *Store) GetLocationAvg(id int32, fromDate *time.Time, toDate *time.Time, fromAge *time.Time, toAge *time.Time, gender *string) (float64, bool) {
+	var avg float64
+	s.mx.RLock()
+	defer s.mx.RUnlock()
+	vi, ok := s.visitsByLocationID[id]
+	if ok {
+		visits := vi.GetByAgeAndGender(fromDate, toDate, fromAge, toAge, gender)
+		if len(visits) > 0 {
+			for i := range visits {
+				avg += float64(*(visits[i].Mark))
+			}
+			avg = avg / float64(len(visits))
+		}
+		return avg, true
+	}
+	return 0, false
 }
 
 // UpdateLocationByID updates location with id by user
@@ -167,12 +187,12 @@ func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
 }
 
 func (s *Store) addVisitToVisitsByLocationID(visit *model.Visit) {
-	vl, ok := s.visitsByLocationID[*(visit.LocationID)]
+	vi, ok := s.visitsByLocationID[*(visit.LocationID)]
 	if !ok {
-		vl = NewVisitList()
-		s.visitsByLocationID[*(visit.LocationID)] = vl
+		vi = NewVisitIndex()
+		s.visitsByLocationID[*(visit.LocationID)] = vi
 	}
-	vl.Add(visit)
+	vi.Add(visit)
 }
 
 func (s *Store) addVisitToVisitsByUserID(visit *model.Visit) {
@@ -240,7 +260,7 @@ func (s *Store) GetVisitsByUserID(id int32, fromDate *time.Time, toDate *time.Ti
 	defer s.mx.RUnlock()
 	visitIndex, ok := s.visitsByUserID[id]
 	if ok {
-		visits := visitIndex.Get(fromDate, toDate, country, toDistance)
+		visits := visitIndex.GetByCountryAndDistance(fromDate, toDate, country, toDistance)
 		return &visits, true
 	}
 	return nil, false
@@ -282,15 +302,12 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 			// transfer from one VisitIndex to another
 			vi, ok := s.visitsByUserID[*(v.UserID)]
 			if ok {
-				removed := vi.Remove(v)
-				log.Print("ISRemoved: ", removed)
-				log.Printf("Removed from %v", *(v.UserID))
+				vi.Remove(v)
 			}
 
 			v.UserID = visit.UserID
 			s.updateUserLink(v)
 			s.addVisitToVisitsByUserID(v)
-			log.Printf("Added to from %v", *(v.UserID))
 		}
 	}
 	if visit.VisitedAt != nil {

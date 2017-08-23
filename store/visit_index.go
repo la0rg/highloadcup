@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -25,7 +24,7 @@ func (v VisitItem) Less(then btree.Item) bool {
 	return v.VisitedAt.Before(*(visit.VisitedAt)) //|| (visit.ID != nil && *(v.ID) < *(visit.ID))
 }
 
-func appendIterator(listPtr *[]model.Visit, country *string, toDistance *int32) func(item btree.Item) bool {
+func appendIteratorByCountryAndVisit(listPtr *[]model.Visit, country *string, toDistance *int32) func(item btree.Item) bool {
 	return func(item btree.Item) bool {
 		location := item.(VisitItem).Location
 		// country - название страны, в которой находятся интересующие достопримечательности
@@ -37,6 +36,26 @@ func appendIterator(listPtr *[]model.Visit, country *string, toDistance *int32) 
 			return true
 		}
 
+		*listPtr = append(*listPtr, *(item.(VisitItem).Visit))
+		return true
+	}
+}
+
+func appendIteratorByAgeAndGender(listPtr *[]model.Visit, fromAge *time.Time, toAge *time.Time, gender *string) func(item btree.Item) bool {
+	return func(item btree.Item) bool {
+		user := item.(VisitItem).User
+		// fromAge - учитывать только путешественников, у которых возраст (считается от текущего timestamp) строго больше этого параметра
+		// birthdate < timestamp
+		if fromAge != nil && (user == nil || !fromAge.After(*(user.BirthDate))) {
+			return true
+		}
+		// birthdate > timestamp
+		if toAge != nil && (user == nil || !user.BirthDate.After(*toAge)) {
+			return true
+		}
+		if gender != nil && (user == nil || *(user.Gender) != *gender) {
+			return true
+		}
 		*listPtr = append(*listPtr, *(item.(VisitItem).Visit))
 		return true
 	}
@@ -54,26 +73,30 @@ func (vi *VisitIndex) Add(visit *model.Visit) {
 	vi.byDate.ReplaceOrInsert(VisitItem{visit})
 }
 
-func (vi *VisitIndex) Get(fromDate *time.Time, toDate *time.Time, country *string, toDistance *int32) model.UserVisitArray {
-	vi.mx.RLock()
-	defer vi.mx.RUnlock()
-	visits := make([]model.Visit, 0)
+func (vi *VisitIndex) get(fromDate *time.Time, toDate *time.Time, iter btree.ItemIterator) {
 	switch {
 	case fromDate == nil && toDate == nil:
-		vi.byDate.Ascend(appendIterator(&visits, country, toDistance))
+		vi.byDate.Ascend(iter)
 	case fromDate != nil && toDate != nil:
 		from := fromDate.Add(time.Microsecond)
 		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
 		lessThan := VisitItem{&model.Visit{VisitedAt: toDate}}
-		vi.byDate.AscendRange(greaterOrEqual, lessThan, appendIterator(&visits, country, toDistance))
+		vi.byDate.AscendRange(greaterOrEqual, lessThan, iter)
 	case fromDate != nil:
 		from := fromDate.Add(time.Microsecond)
 		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
-		vi.byDate.AscendGreaterOrEqual(greaterOrEqual, appendIterator(&visits, country, toDistance))
+		vi.byDate.AscendGreaterOrEqual(greaterOrEqual, iter)
 	case toDate != nil:
 		lessThan := VisitItem{&model.Visit{VisitedAt: toDate}}
-		vi.byDate.AscendLessThan(lessThan, appendIterator(&visits, country, toDistance))
+		vi.byDate.AscendLessThan(lessThan, iter)
 	}
+}
+
+func (vi *VisitIndex) GetByCountryAndDistance(fromDate *time.Time, toDate *time.Time, country *string, toDistance *int32) model.UserVisitArray {
+	vi.mx.RLock()
+	defer vi.mx.RUnlock()
+	visits := make([]model.Visit, 0)
+	vi.get(fromDate, toDate, appendIteratorByCountryAndVisit(&visits, country, toDistance))
 	userVisits := make([]model.UserVisit, len(visits))
 	for i := range visits {
 		userVisits[i] = model.UserVisit{Visit: visits[i]}
@@ -83,10 +106,26 @@ func (vi *VisitIndex) Get(fromDate *time.Time, toDate *time.Time, country *strin
 	}
 }
 
+func (vi *VisitIndex) GetByAgeAndGender(fromDate *time.Time, toDate *time.Time, fromAge *time.Time, toAge *time.Time, gender *string) []model.Visit {
+	vi.mx.RLock()
+	defer vi.mx.RUnlock()
+	visits := make([]model.Visit, 0)
+	vi.get(fromDate, toDate, appendIteratorByAgeAndGender(&visits, fromAge, toAge, gender))
+	return visits
+}
+
 func (vi *VisitIndex) Remove(visit *model.Visit) bool {
 	vi.mx.Lock()
 	defer vi.mx.Unlock()
 	deleted := vi.byDate.Delete(VisitItem{visit})
-	fmt.Println(deleted)
 	return deleted != nil
+}
+
+func (vi *VisitIndex) ApplyToAll(f func(*model.Visit)) {
+	vi.mx.Lock()
+	defer vi.mx.Unlock()
+	vi.byDate.Ascend(func(item btree.Item) bool {
+		f(item.(VisitItem).Visit)
+		return true
+	})
 }

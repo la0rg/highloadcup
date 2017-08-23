@@ -14,10 +14,13 @@ import (
 )
 
 var dataStore = store.NewStore()
+var now time.Time
 
 func main() {
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(NotFound)
+
+	now = util.ImportCurrentTimestamp()
 
 	// import static data
 	start := time.Now()
@@ -53,6 +56,7 @@ func routing(router *mux.Router) {
 	router.HandleFunc("/users/{id}/visits", VisitsByUser).Methods("GET")
 
 	router.HandleFunc("/locations/{id}", Location).Methods("GET")
+	router.HandleFunc("/locations/{id}/avg", LocationAvg).Methods("GET")
 	router.HandleFunc("/locations/new", LocationCreate).Methods("POST")
 	router.HandleFunc("/locations/{id}", LocationUpdate).Methods("POST")
 

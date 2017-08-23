@@ -2,10 +2,14 @@ package util
 
 import (
 	"archive/zip"
+	"bufio"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/la0rg/highloadcup/model"
 	"github.com/la0rg/highloadcup/store"
@@ -101,4 +105,22 @@ func importVisits(b []byte, store *store.Store) error {
 		store.AddVisit(v)
 	}
 	return nil
+}
+
+func ImportCurrentTimestamp() time.Time {
+	file, err := os.Open("/tmp/data/options.txt")
+	defer file.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	scan := bufio.NewScanner(file)
+	if !scan.Scan() {
+		log.Fatal("Could not scan the option.txt file.")
+	}
+	timestampText := scan.Text()
+	i64, err := strconv.ParseInt(timestampText, 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return time.Unix(i64, 0)
 }
