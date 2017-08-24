@@ -18,7 +18,7 @@ import (
 func User(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	user, ok := dataStore.GetUserByID(id)
@@ -29,7 +29,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.Error(w, "", http.StatusNotFound)
+	w.WriteHeader(http.StatusNotFound)
 }
 
 // UserUpdate update user entity
@@ -39,7 +39,7 @@ func User(w http.ResponseWriter, r *http.Request) {
 func UserUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -68,6 +68,7 @@ func UserUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -93,6 +94,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -100,7 +102,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 func Location(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	location, ok := dataStore.GetLocationByID(id)
@@ -111,7 +113,7 @@ func Location(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.Error(w, "", http.StatusNotFound)
+	w.WriteHeader(http.StatusNotFound)
 }
 
 // Location returns a location by id
@@ -190,7 +192,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -218,6 +220,7 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -243,6 +246,7 @@ func LocationCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -250,7 +254,7 @@ func LocationCreate(w http.ResponseWriter, r *http.Request) {
 func Visit(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	visit, ok := dataStore.GetVisitByID(id)
@@ -261,13 +265,13 @@ func Visit(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.Error(w, "", http.StatusNotFound)
+	w.WriteHeader(http.StatusNotFound)
 }
 
 func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	// // check if user does not exist
@@ -334,7 +338,7 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r)
 	if err != nil {
-		http.Error(w, "", http.StatusNotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -363,6 +367,7 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -388,6 +393,7 @@ func VisitCreate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.Header().Add("Connection", "close")
 	w.Write([]byte("{}"))
 }
 
@@ -418,6 +424,7 @@ func writeStructAsJSON(w http.ResponseWriter, data interface{}) error {
 	}
 	w.Header().Add("Content-Type", "application/json")
 	w.Header().Add("Content-Length", strconv.Itoa(len(b)))
+	w.Header().Add("Connection", "Keep-Alive")
 	_, err = w.Write(b)
 	if err != nil {
 		return err
