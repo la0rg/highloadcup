@@ -16,7 +16,11 @@ import (
 var dataStore = store.NewStore()
 var now time.Time
 
+const version = 2.1
+
 func main() {
+	log.Infof("Starting version: %f", version)
+
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(NotFound)
 

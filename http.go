@@ -173,7 +173,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 
 	avg, ok := dataStore.GetLocationAvg(id, fromDate, toDate, fromAge, toAge, gender)
 	if ok {
-		avg = util.RoundPlus(avg, 5)
+		//avg = util.RoundPlus(avg, 5)
 		err = writeStructAsJSON(w, model.Avg{Value: model.FloatPrec5(avg)})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

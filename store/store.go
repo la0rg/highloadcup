@@ -312,13 +312,19 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 	if visit.VisitedAt != nil {
 		if *(v.VisitedAt) != *(visit.VisitedAt) {
 			// Delete and insert again visit to the VisitIndex (tree rebalancing)
-			vi, ok := s.visitsByUserID[*(v.UserID)]
-			if ok {
-				vi.Remove(v)
+			vi1, ok1 := s.visitsByUserID[*(v.UserID)]
+			vi2, ok2 := s.visitsByLocationID[*(v.LocationID)]
+			if ok1 {
+				vi1.Remove(v)
+			}
+			if ok2 {
+				vi2.Remove(v)
 			}
 
 			v.VisitedAt = visit.VisitedAt
+
 			s.addVisitToVisitsByUserID(v)
+			s.addVisitToVisitsByLocationID(v)
 		}
 	}
 	return nil

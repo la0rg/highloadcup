@@ -8,5 +8,4 @@ WORKDIR /root/
 COPY --from=builder /go/src/github.com/la0rg/highloadcup/app .
 #COPY data.zip /tmp/data/
 EXPOSE 80
-ENV GOGC=off
 CMD ["./app"]
