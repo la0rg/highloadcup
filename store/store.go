@@ -51,8 +51,12 @@ func (s *Store) AddUser(user model.User) error {
 	s.usersByID[*(user.ID)] = &user
 
 	// initialize visitsByUserID with empty index (to return [] if user exist and visits were not added)
-	_, ok = s.visitsByUserID[*(user.ID)]
-	if !ok {
+	vi, ok := s.visitsByUserID[*(user.ID)]
+	if ok {
+		vi.ApplyToAll(func(visit *model.Visit) {
+			visit.User = &user
+		})
+	} else {
 		s.visitsByUserID[*(user.ID)] = NewVisitIndex()
 	}
 	return nil
@@ -203,7 +207,7 @@ func (s *Store) addVisitToVisitsByUserID(visit *model.Visit) {
 	visitIndex.Add(visit)
 }
 
-func (s *Store) updateLocatonLink(visit *model.Visit) {
+func (s *Store) updateLocationLink(visit *model.Visit) {
 	location, ok := s.locationsByID[*(visit.LocationID)]
 	if ok {
 		visit.Location = location
@@ -236,7 +240,7 @@ func (s *Store) AddVisit(visit model.Visit) error {
 	s.addVisitToVisitsByUserID(&visit)
 
 	// connect to location
-	s.updateLocatonLink(&visit)
+	s.updateLocationLink(&visit)
 	// connect to user
 	s.updateUserLink(&visit)
 	return nil
@@ -287,7 +291,7 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 			}
 
 			v.LocationID = visit.LocationID
-			s.updateLocatonLink(v)
+			s.updateLocationLink(v)
 
 			// add again with updated id
 			s.addVisitToVisitsByLocationID(v)
