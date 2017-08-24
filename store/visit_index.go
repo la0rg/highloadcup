@@ -2,7 +2,6 @@ package store
 
 import (
 	"sync"
-	"time"
 
 	"github.com/google/btree"
 	"github.com/la0rg/highloadcup/model"
@@ -21,7 +20,7 @@ func (v VisitItem) Less(then btree.Item) bool {
 	visit := then.(VisitItem)
 	//log.Printf("Compare %v %v %p and %v %v %p", (*(v.VisitedAt)).Unix(), *(v.ID), v.Visit, (*(visit.VisitedAt)).Unix(), *(visit.ID), visit.Visit)
 	// VisitedAt as a main index of the tree
-	return v.VisitedAt.Before(*(visit.VisitedAt)) //|| (visit.ID != nil && *(v.ID) < *(visit.ID))
+	return *(v.VisitedAt) < *(visit.VisitedAt) //|| (visit.ID != nil && *(v.ID) < *(visit.ID))
 }
 
 func appendIteratorByCountryAndVisit(listPtr *[]model.Visit, country *string, toDistance *int32) func(item btree.Item) bool {
@@ -41,16 +40,16 @@ func appendIteratorByCountryAndVisit(listPtr *[]model.Visit, country *string, to
 	}
 }
 
-func appendIteratorByAgeAndGender(listPtr *[]model.Visit, fromAge *time.Time, toAge *time.Time, gender *string) func(item btree.Item) bool {
+func appendIteratorByAgeAndGender(listPtr *[]model.Visit, fromAge *int64, toAge *int64, gender *string) func(item btree.Item) bool {
 	return func(item btree.Item) bool {
 		user := item.(VisitItem).User
 		// fromAge - учитывать только путешественников, у которых возраст (считается от текущего timestamp) строго больше этого параметра
 		// birthdate < timestamp
-		if fromAge != nil && (user == nil || !fromAge.After(*(user.BirthDate))) {
+		if fromAge != nil && (user == nil || *fromAge <= *(user.BirthDate)) {
 			return true
 		}
 		// birthdate > timestamp
-		if toAge != nil && (user == nil || !user.BirthDate.After(*toAge)) {
+		if toAge != nil && (user == nil || *(user.BirthDate) <= *toAge) {
 			return true
 		}
 		if gender != nil && (user == nil || *(user.Gender) != *gender) {
@@ -73,17 +72,17 @@ func (vi *VisitIndex) Add(visit *model.Visit) {
 	vi.byDate.ReplaceOrInsert(VisitItem{visit})
 }
 
-func (vi *VisitIndex) get(fromDate *time.Time, toDate *time.Time, iter btree.ItemIterator) {
+func (vi *VisitIndex) get(fromDate *int64, toDate *int64, iter btree.ItemIterator) {
 	switch {
 	case fromDate == nil && toDate == nil:
 		vi.byDate.Ascend(iter)
 	case fromDate != nil && toDate != nil:
-		from := fromDate.Add(time.Microsecond)
+		from := *fromDate + 1
 		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
 		lessThan := VisitItem{&model.Visit{VisitedAt: toDate}}
 		vi.byDate.AscendRange(greaterOrEqual, lessThan, iter)
 	case fromDate != nil:
-		from := fromDate.Add(time.Microsecond)
+		from := *fromDate + 1
 		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
 		vi.byDate.AscendGreaterOrEqual(greaterOrEqual, iter)
 	case toDate != nil:
@@ -92,7 +91,7 @@ func (vi *VisitIndex) get(fromDate *time.Time, toDate *time.Time, iter btree.Ite
 	}
 }
 
-func (vi *VisitIndex) GetByCountryAndDistance(fromDate *time.Time, toDate *time.Time, country *string, toDistance *int32) model.UserVisitArray {
+func (vi *VisitIndex) GetByCountryAndDistance(fromDate *int64, toDate *int64, country *string, toDistance *int32) model.UserVisitArray {
 	vi.mx.RLock()
 	defer vi.mx.RUnlock()
 	visits := make([]model.Visit, 0)
@@ -106,7 +105,7 @@ func (vi *VisitIndex) GetByCountryAndDistance(fromDate *time.Time, toDate *time.
 	}
 }
 
-func (vi *VisitIndex) GetByAgeAndGender(fromDate *time.Time, toDate *time.Time, fromAge *time.Time, toAge *time.Time, gender *string) []model.Visit {
+func (vi *VisitIndex) GetByAgeAndGender(fromDate *int64, toDate *int64, fromAge *int64, toAge *int64, gender *string) []model.Visit {
 	vi.mx.RLock()
 	defer vi.mx.RUnlock()
 	visits := make([]model.Visit, 0)

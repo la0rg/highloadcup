@@ -3,7 +3,6 @@ package store
 import (
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/la0rg/highloadcup/model"
 )
@@ -141,7 +140,7 @@ func (s *Store) GetLocationByID(id int32) (*model.Location, bool) {
 	return &result, ok
 }
 
-func (s *Store) GetLocationAvg(id int32, fromDate *time.Time, toDate *time.Time, fromAge *time.Time, toAge *time.Time, gender *string) (float64, bool) {
+func (s *Store) GetLocationAvg(id int32, fromDate *int64, toDate *int64, fromAge *int64, toAge *int64, gender *string) (float64, bool) {
 	var avg float64
 	s.mx.RLock()
 	defer s.mx.RUnlock()
@@ -255,7 +254,7 @@ func (s *Store) GetVisitByID(id int32) (*model.Visit, bool) {
 	return &result, ok
 }
 
-func (s *Store) GetVisitsByUserID(id int32, fromDate *time.Time, toDate *time.Time, country *string, toDistance *int32) (*model.UserVisitArray, bool) {
+func (s *Store) GetVisitsByUserID(id int32, fromDate *int64, toDate *int64, country *string, toDistance *int32) (*model.UserVisitArray, bool) {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
 	visitIndex, ok := s.visitsByUserID[id]

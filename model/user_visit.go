@@ -19,6 +19,6 @@ func (v *UserVisit) MarshalJSON() ([]byte, error) {
 	}{
 		Mark:      *(v.Mark),
 		Place:     *(v.Location.Place),
-		VisitedAt: v.VisitedAt.Unix(),
+		VisitedAt: *(v.VisitedAt),
 	})
 }

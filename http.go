@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
@@ -123,7 +122,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var fromDate, toDate, fromAge, toAge *time.Time
+	var fromDate, toDate, fromAge, toAge *int64
 	var gender *string
 	keys, ok := r.URL.Query()["fromDate"]
 	if ok && len(keys) >= 1 {
@@ -132,8 +131,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := time.Unix(i64, 0)
-		fromDate = &date
+		fromDate = &i64
 	}
 	keys, ok = r.URL.Query()["toDate"]
 	if ok && len(keys) >= 1 {
@@ -142,8 +140,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := time.Unix(i64, 0)
-		toDate = &date
+		toDate = &i64
 	}
 	keys, ok = r.URL.Query()["fromAge"]
 	if ok && len(keys) >= 1 {
@@ -152,7 +149,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := now.AddDate(-i, 0, 0)
+		date := now.AddDate(-i, 0, 0).Unix()
 		fromAge = &date
 	}
 	keys, ok = r.URL.Query()["toAge"]
@@ -162,7 +159,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := now.AddDate(-i, 0, 0)
+		date := now.AddDate(-i, 0, 0).Unix()
 		toAge = &date
 	}
 	keys, ok = r.URL.Query()["gender"]
@@ -279,7 +276,7 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 	// 	w.WriteHeader(http.StatusNotFound)
 	// 	return
 	// }
-	var fromDate, toDate *time.Time
+	var fromDate, toDate *int64
 	var country *string
 	var toDistance *int32
 	keys, ok := r.URL.Query()["fromDate"]
@@ -289,8 +286,7 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := time.Unix(i64, 0)
-		fromDate = &date
+		fromDate = &i64
 	}
 	keys, ok = r.URL.Query()["toDate"]
 	if ok && len(keys) >= 1 {
@@ -299,8 +295,7 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		date := time.Unix(i64, 0)
-		toDate = &date
+		toDate = &i64
 	}
 	keys, ok = r.URL.Query()["country"]
 	if ok && len(keys) >= 1 {
