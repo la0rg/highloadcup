@@ -2,58 +2,65 @@ package main
 
 import (
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
 	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
 	"github.com/mailru/easyjson"
+	"github.com/qiangxue/fasthttp-routing"
 
-	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
 )
 
 var emptyObject = []byte("{}")
+var ErrParse = errors.New("Could not parse Id from request")
+
+const (
+	FromDate   = "fromDate"
+	ToDate     = "toDate"
+	FromAge    = "fromAge"
+	ToAge      = "toAge"
+	Gender     = "gender"
+	Country    = "country"
+	ToDistance = "toDistance"
+)
 
 // User returns a user by id
-func User(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func User(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 	user, ok := dataStore.GetUserByID(id)
 	if ok {
-		err = writeStructAsJSON(w, user)
+		err = writeStructAsJSON(ctx, user)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
-		return
+		return nil
 	}
-	w.WriteHeader(http.StatusNotFound)
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
 // UserUpdate update user entity
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func UserUpdate(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func UserUpdate(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
 	if errNull {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
 	var user model.User
@@ -65,153 +72,143 @@ func UserUpdate(w http.ResponseWriter, r *http.Request) {
 	// 404 is a higher priority than 400
 	if err != nil {
 		if err == store.ErrDoesNotExist {
-			w.WriteHeader(http.StatusNotFound)
+			ctx.SetStatusCode(http.StatusNotFound)
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			ctx.SetStatusCode(http.StatusBadRequest)
 		}
-		return
+		return nil
 	}
 	if errParse != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // UserCreate create user entity
 // success - 200 with body {}
 // already exist - 400
 // incorrect request - 400
-func UserCreate(w http.ResponseWriter, r *http.Request) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+func UserCreate(ctx *routing.Context) error {
 	var user model.User
-	err = easyjson.Unmarshal(bytes, &user)
+	err := easyjson.Unmarshal(ctx.PostBody(), &user)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 	err = dataStore.AddUser(user)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // Location returns a location by id
-func Location(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func Location(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 	location, ok := dataStore.GetLocationByID(id)
 	if ok {
-		err = writeStructAsJSON(w, location)
+		err = writeStructAsJSON(ctx, location)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
-		return
+		return nil
 	}
-	w.WriteHeader(http.StatusNotFound)
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
 // Location returns a location by id
-func LocationAvg(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func LocationAvg(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 
 	var fromDate, toDate, fromAge, toAge *int64
 	var gender *string
-	keys, ok := r.URL.Query()["fromDate"]
-	if ok && len(keys) >= 1 {
-		i64, err := strconv.ParseInt(keys[0], 10, 64)
+
+	args := ctx.QueryArgs()
+	if args.Has(FromDate) {
+		i64, err := strconv.ParseInt(string(args.Peek(FromDate)), 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		fromDate = &i64
 	}
-	keys, ok = r.URL.Query()["toDate"]
-	if ok && len(keys) >= 1 {
-		i64, err := strconv.ParseInt(keys[0], 10, 64)
+	if args.Has(ToDate) {
+		i64, err := strconv.ParseInt(string(args.Peek(ToDate)), 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		toDate = &i64
 	}
-	keys, ok = r.URL.Query()["fromAge"]
-	if ok && len(keys) >= 1 {
-		i, err := strconv.Atoi(keys[0])
+	if args.Has(FromAge) {
+		i, err := strconv.Atoi(string(args.Peek(FromAge)))
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		date := now.AddDate(-i, 0, 0).Unix()
 		fromAge = &date
 	}
-	keys, ok = r.URL.Query()["toAge"]
-	if ok && len(keys) >= 1 {
-		i, err := strconv.Atoi(keys[0])
+	if args.Has(ToAge) {
+		i, err := strconv.Atoi(string(args.Peek(ToAge)))
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		date := now.AddDate(-i, 0, 0).Unix()
 		toAge = &date
 	}
-	keys, ok = r.URL.Query()["gender"]
-	if ok && len(keys) >= 1 {
-		gender = &(keys[0])
+	if args.Has(Gender) {
+		str := string(args.Peek(Gender))
+		gender = &str
 		if !util.IsGender(*gender) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 	}
 
 	avg, ok := dataStore.GetLocationAvg(id, fromDate, toDate, fromAge, toAge, gender)
 	if ok {
 		//avg = util.RoundPlus(avg, 5)
-		err = writeStructAsJSON(w, model.Avg{Value: avg})
+		err = writeStructAsJSON(ctx, model.Avg{Value: avg})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
-		return
+		return nil
 	}
-	w.WriteHeader(http.StatusNotFound)
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
 // LocationUpdate update location entity
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func LocationUpdate(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func LocationUpdate(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
 	if errNull {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
 	var location model.Location
@@ -223,111 +220,101 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 	err = dataStore.UpdateLocationByID(id, location)
 	if err != nil {
 		if err == store.ErrDoesNotExist {
-			w.WriteHeader(http.StatusNotFound)
+			ctx.SetStatusCode(http.StatusNotFound)
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			ctx.SetStatusCode(http.StatusBadRequest)
 		}
-		return
+		return nil
 	}
 	if errParse != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // LocationCreate create location entity
 // success - 200 with body {}
 // already exist - 400
 // incorrect request - 400
-func LocationCreate(w http.ResponseWriter, r *http.Request) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func LocationCreate(ctx *routing.Context) error {
+	bytes := ctx.PostBody()
 
 	var location model.Location
-	err = easyjson.Unmarshal(bytes, &location)
+	err := easyjson.Unmarshal(bytes, &location)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 	err = dataStore.AddLocation(location)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // Visit returns a visit by id
-func Visit(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func Visit(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 	visit, ok := dataStore.GetVisitByID(id)
 	if ok {
-		err = writeStructAsJSON(w, visit)
+		err = writeStructAsJSON(ctx, visit)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
-		return
+		return nil
 	}
-	w.WriteHeader(http.StatusNotFound)
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
-func VisitsByUser(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func VisitsByUser(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
-	// // check if user does not exist
-	// _, ok := dataStore.GetUserByID(id)
-	// if !ok {
-	// 	w.WriteHeader(http.StatusNotFound)
-	// 	return
-	// }
+
 	var fromDate, toDate *int64
 	var country *string
 	var toDistance *int32
-	keys, ok := r.URL.Query()["fromDate"]
-	if ok && len(keys) >= 1 {
-		i64, err := strconv.ParseInt(keys[0], 10, 64)
+	args := ctx.QueryArgs()
+	if args.Has(FromDate) {
+		i64, err := strconv.ParseInt(string(args.Peek(FromDate)), 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		fromDate = &i64
 	}
-	keys, ok = r.URL.Query()["toDate"]
-	if ok && len(keys) >= 1 {
-		i64, err := strconv.ParseInt(keys[0], 10, 64)
+	if args.Has(ToDate) {
+		i64, err := strconv.ParseInt(string(args.Peek(ToDate)), 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		toDate = &i64
 	}
-	keys, ok = r.URL.Query()["country"]
-	if ok && len(keys) >= 1 {
-		country = &(keys[0])
+	if args.Has(Country) {
+		str := string(args.Peek(Country))
+		country = &(str)
 		if !util.OnlyLetters(*country) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 	}
-	keys, ok = r.URL.Query()["toDistance"]
-	if ok && len(keys) >= 1 {
-		i64, err := strconv.ParseInt(keys[0], 10, 32)
+	if args.Has(ToDistance) {
+		i64, err := strconv.ParseInt(string(args.Peek(ToDistance)), 10, 32)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			ctx.SetStatusCode(http.StatusBadRequest)
+			return nil
 		}
 		i32 := int32(i64)
 		toDistance = &i32
@@ -335,35 +322,32 @@ func VisitsByUser(w http.ResponseWriter, r *http.Request) {
 
 	visits, ok := dataStore.GetVisitsByUserID(id, fromDate, toDate, country, toDistance)
 	if ok {
-		err = writeStructAsJSON(w, visits)
+		err = writeStructAsJSON(ctx, visits)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
-		return
+		return nil
 	}
-	w.WriteHeader(http.StatusNotFound)
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
 // VisitUpdate update user entity
 // success - 200 with body {}
 // id is not found - 404
 // incorrect request - 400
-func VisitUpdate(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r)
+func VisitUpdate(ctx *routing.Context) error {
+	id, err := parseID(ctx)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
 	}
 
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
 	if errNull {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 
 	var visit model.Visit
@@ -375,74 +359,75 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 	// 404 is a higher priority than 400
 	if err != nil {
 		if err == store.ErrDoesNotExist {
-			w.WriteHeader(http.StatusNotFound)
+			ctx.SetStatusCode(http.StatusNotFound)
 		} else {
-			w.WriteHeader(http.StatusBadRequest)
+			ctx.SetStatusCode(http.StatusBadRequest)
 		}
-		return
+		return nil
 	}
 	if errParse != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // VisitCreate create location entity
 // success - 200 with body {}
 // already exist - 400
 // incorrect request - 400
-func VisitCreate(w http.ResponseWriter, r *http.Request) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func VisitCreate(ctx *routing.Context) error {
+	bytes := ctx.PostBody()
 
 	var visit model.Visit
-	err = easyjson.Unmarshal(bytes, &visit)
+	err := easyjson.Unmarshal(bytes, &visit)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
 	err = dataStore.AddVisit(visit)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		ctx.SetStatusCode(http.StatusBadRequest)
+		return nil
 	}
-	w.Header().Add("Connection", "close")
-	w.Write(emptyObject)
+	ctx.SetBody(emptyObject)
+	return nil
 }
 
 // NotFound custom request handler for non-found requests
-func NotFound(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
+func NotFound(ctx *routing.Context) error {
+	ctx.SetStatusCode(http.StatusNotFound)
+	return nil
 }
 
-func parseID(r *http.Request) (int32, error) {
-	errParse := errors.New("Could not parse Id from request")
-	vars := mux.Vars(r)
-	strID, ok := vars["id"]
-	if !ok {
-		return 0, errParse
-	}
-	id64, err := strconv.ParseInt(strID, 10, 32)
+func parseID(ctx *routing.Context) (int32, error) {
+	id64, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
 	id := int32(id64)
 	if err != nil {
-		return 0, errParse
+		return 0, ErrParse
 	}
 	return id, nil
 }
 
-func writeStructAsJSON(w http.ResponseWriter, object easyjson.Marshaler) error {
+func writeStructAsJSON(ctx *routing.Context, object easyjson.Marshaler) error {
 	b, err := easyjson.Marshal(object)
 	if err != nil {
 		return err
 	}
-	w.Header().Add("Content-Type", "application/json")
-	w.Header().Add("Content-Length", strconv.Itoa(len(b)))
-	w.Header().Add("Connection", "Keep-Alive")
-	_, err = w.Write(b)
+	ctx.Response.Header.Set("Content-Type", "application/json")
+	ctx.Response.Header.Set("Content-Length", strconv.Itoa(len(b)))
+
+	ctx.SetBody(b)
 	return err
+}
+
+func ConnKeepAlive(ctx *routing.Context) error {
+	ctx.Response.Header.Set("Connection", "Keep-Alive")
+	return nil
+}
+
+func ConnClose(ctx *routing.Context) error {
+	ctx.Response.Header.Set("Connection", "Close")
+	return nil
 }

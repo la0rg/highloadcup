@@ -1,30 +1,27 @@
 package main
 
 import (
-	"context"
-	"net/http"
-	"os"
-	"os/signal"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
+	"github.com/qiangxue/fasthttp-routing"
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 )
 
 var dataStore = store.NewStore()
 var now time.Time
 
-const version = 3.0
+const version = 4.0
 
 func main() {
-	//p := profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+	//p := profile.Start(profile.CPUProfile, profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
 
 	log.Infof("Starting version: %f", version)
 
-	router := mux.NewRouter()
-	router.NotFoundHandler = http.HandlerFunc(NotFound)
+	router := routing.New()
+	//router.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	now = util.ImportCurrentTimestamp()
 
@@ -37,37 +34,24 @@ func main() {
 	log.Infof("Time to load data.zip: %v", time.Since(start))
 
 	// set up routes
-	routing(router)
+	setRouting(router)
 
 	// start http server
-	h := &http.Server{Addr: ":80", Handler: router}
-	go func() {
-		log.Fatal(h.ListenAndServe())
-	}()
-
-	// graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	<-stop
-	//p.Stop()
-	log.Info("Shutting down the server...")
-	ctx, cn := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cn()
-	h.Shutdown(ctx)
+	log.Fatal(fasthttp.ListenAndServe(":80", router.HandleRequest))
 }
 
-func routing(router *mux.Router) {
-	router.HandleFunc("/users/{id}", User).Methods("GET")
-	router.HandleFunc("/users/new", UserCreate).Methods("POST")
-	router.HandleFunc("/users/{id}", UserUpdate).Methods("POST")
-	router.HandleFunc("/users/{id}/visits", VisitsByUser).Methods("GET")
+func setRouting(router *routing.Router) {
+	router.Get("/users/<id>", ConnKeepAlive, User)
+	router.Get("/users/<id>/visits", VisitsByUser)
+	router.Post("/users/new", ConnClose, UserCreate)
+	router.Post("/users/<id>", ConnClose, UserUpdate)
 
-	router.HandleFunc("/locations/{id}", Location).Methods("GET")
-	router.HandleFunc("/locations/{id}/avg", LocationAvg).Methods("GET")
-	router.HandleFunc("/locations/new", LocationCreate).Methods("POST")
-	router.HandleFunc("/locations/{id}", LocationUpdate).Methods("POST")
+	router.Get("/locations/<id>/avg", ConnKeepAlive, LocationAvg)
+	router.Get("/locations/<id>", ConnKeepAlive, Location)
+	router.Post("/locations/new", ConnClose, LocationCreate)
+	router.Post("/locations/<id>", ConnClose, LocationUpdate)
 
-	router.HandleFunc("/visits/{id}", Visit).Methods("GET")
-	router.HandleFunc("/visits/new", VisitCreate).Methods("POST")
-	router.HandleFunc("/visits/{id}", VisitUpdate).Methods("POST")
+	router.Get("/visits/<id>", ConnKeepAlive, Visit)
+	router.Post("/visits/new", ConnClose, VisitCreate)
+	router.Post("/visits/<id>", ConnClose, VisitUpdate)
 }
