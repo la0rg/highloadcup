@@ -8,16 +8,28 @@
   revision = "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
 
 [[projects]]
-  name = "github.com/gorilla/context"
+  name = "github.com/klauspost/compress"
+  packages = ["flate","gzip","zlib"]
+  revision = "6c8db69c4b49dd4df1fff66996cf556176d0b9bf"
+  version = "v1.2.1"
+
+[[projects]]
+  name = "github.com/klauspost/cpuid"
   packages = ["."]
-  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+  revision = "ae7887de9fa5d2db4eaa8174a7eff2c1ac00f2da"
   version = "v1.1"
 
 [[projects]]
-  name = "github.com/gorilla/mux"
+  name = "github.com/klauspost/crc32"
   packages = ["."]
-  revision = "bcd8bc72b08df0f70df986b97f95590779502d31"
-  version = "v1.4.0"
+  revision = "cb6bfca970f6908083f26f39a79009d608efd5cd"
+  version = "v1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [".","buffer","jlexer","jwriter","opt"]
+  revision = "3b3bbef4e2d9a6f24d7ee73a894afbc064f0e057"
 
 [[projects]]
   branch = "master"
@@ -26,10 +38,22 @@
   revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/qiangxue/fasthttp-routing"
+  packages = ["."]
+  revision = "6ccdc2a18d8712f842de50ddcb8c9a3d025ddc71"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "f006c2ac4710855cf0f916dd6b77acf6b048dc6e"
   version = "v1.0.3"
+
+[[projects]]
+  name = "github.com/valyala/fasthttp"
+  packages = [".","fasthttputil"]
+  revision = "d42167fd04f636e20b005e9934159e95454233c7"
+  version = "v20160617"
 
 [[projects]]
   branch = "master"
@@ -46,6 +70,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a68bc6b81eb779221e8eeae221e1ee2ca36472a4d8e1ee897a6ef42aab833c4d"
+  inputs-digest = "3f424ae64f238210d37a0310c8a02af8b22c351af8b43c064fde4218faad0f45"
   solver-name = "gps-cdcl"
   solver-version = 1

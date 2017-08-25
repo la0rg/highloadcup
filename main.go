@@ -19,12 +19,9 @@ func main() {
 	//p := profile.Start(profile.CPUProfile, profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
 
 	log.Infof("Starting version: %f", version)
-
 	router := routing.New()
-	//router.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	now = util.ImportCurrentTimestamp()
-
 	// import static data
 	start := time.Now()
 	err := util.ImportDataFromZip(dataStore)
@@ -41,17 +38,19 @@ func main() {
 }
 
 func setRouting(router *routing.Router) {
-	router.Get("/users/<id>", ConnKeepAlive, User)
-	router.Get("/users/<id>/visits", VisitsByUser)
+	router.Get("/users/<id>", ParseID, ConnKeepAlive, User)
+	router.Get("/users/<id>/visits", ParseID, VisitsByUser)
 	router.Post("/users/new", ConnClose, UserCreate)
-	router.Post("/users/<id>", ConnClose, UserUpdate)
+	router.Post("/users/<id>", ParseID, ConnClose, UserUpdate)
 
-	router.Get("/locations/<id>/avg", ConnKeepAlive, LocationAvg)
-	router.Get("/locations/<id>", ConnKeepAlive, Location)
+	router.Get("/locations/<id>/avg", ParseID, ConnKeepAlive, LocationAvg)
+	router.Get("/locations/<id>", ParseID, ConnKeepAlive, Location)
 	router.Post("/locations/new", ConnClose, LocationCreate)
-	router.Post("/locations/<id>", ConnClose, LocationUpdate)
+	router.Post("/locations/<id>", ParseID, ConnClose, LocationUpdate)
 
-	router.Get("/visits/<id>", ConnKeepAlive, Visit)
+	router.Get("/visits/<id>", ParseID, ConnKeepAlive, Visit)
 	router.Post("/visits/new", ConnClose, VisitCreate)
-	router.Post("/visits/<id>", ConnClose, VisitUpdate)
+	router.Post("/visits/<id>", ParseID, ConnClose, VisitUpdate)
+
+	router.NotFound(ConnKeepAlive, NotFound)
 }
