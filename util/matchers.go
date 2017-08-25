@@ -1,6 +1,9 @@
 package util
 
-import "unicode"
+import (
+	"strings"
+	"unicode"
+)
 
 func OnlyLetters(s string) bool {
 	return unicode.IsLetter(rune(s[0]))
@@ -8,4 +11,8 @@ func OnlyLetters(s string) bool {
 
 func IsGender(s string) bool {
 	return s == "m" || s == "f"
+}
+
+func ContainsNull(bytes []byte) bool {
+	return strings.Contains(string(bytes), ": null")
 }

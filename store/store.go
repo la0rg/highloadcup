@@ -38,26 +38,26 @@ func NewStore() *Store {
 
 // AddUser adds new user to the store
 func (s *Store) AddUser(user model.User) error {
-	if user.BirthDate == nil || user.Email == nil || user.FirstName == nil ||
-		user.LastName == nil || user.Gender == nil || user.ID == nil {
+	if !user.BirthDate.Defined || !user.Email.Defined || !user.FirstName.Defined ||
+		!user.LastName.Defined || !user.Gender.Defined || !user.ID.Defined {
 		return ErrRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	_, ok := s.usersByID[*(user.ID)]
+	_, ok := s.usersByID[user.ID.V]
 	if ok {
 		return ErrAlreadyExist
 	}
-	s.usersByID[*(user.ID)] = &user
+	s.usersByID[user.ID.V] = &user
 
 	// initialize visitsByUserID with empty index (to return [] if user exist and visits were not added)
-	vi, ok := s.visitsByUserID[*(user.ID)]
+	vi, ok := s.visitsByUserID[user.ID.V]
 	if ok {
 		vi.ApplyToAll(func(visit *model.Visit) {
 			visit.User = &user
 		})
 	} else {
-		s.visitsByUserID[*(user.ID)] = NewVisitIndex()
+		s.visitsByUserID[user.ID.V] = NewVisitIndex()
 	}
 	return nil
 }
@@ -84,22 +84,22 @@ func (s *Store) UpdateUserByID(id int32, user model.User) error {
 	if !ok {
 		return ErrDoesNotExist
 	}
-	if user.ID != nil {
+	if user.ID.Defined {
 		return ErrIDInUpdate
 	}
-	if user.BirthDate != nil {
+	if user.BirthDate.Defined {
 		u.BirthDate = user.BirthDate
 	}
-	if user.Email != nil {
+	if user.Email.Defined {
 		u.Email = user.Email
 	}
-	if user.FirstName != nil {
+	if user.FirstName.Defined {
 		u.FirstName = user.FirstName
 	}
-	if user.LastName != nil {
+	if user.LastName.Defined {
 		u.LastName = user.LastName
 	}
-	if user.Gender != nil {
+	if user.Gender.Defined {
 		u.Gender = user.Gender
 	}
 	return nil
@@ -107,27 +107,27 @@ func (s *Store) UpdateUserByID(id int32, user model.User) error {
 
 // AddLocation adds new location to the store
 func (s *Store) AddLocation(location model.Location) error {
-	if location.City == nil || location.Country == nil || location.Distance == nil ||
-		location.ID == nil || location.Place == nil {
+	if !location.City.Defined || !location.Country.Defined || !location.Distance.Defined ||
+		!location.ID.Defined || !location.Place.Defined {
 		return ErrRequiredFields
 	}
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	_, ok := s.locationsByID[*(location.ID)]
+	_, ok := s.locationsByID[location.ID.V]
 	if ok {
 		return ErrAlreadyExist
 	}
-	s.locationsByID[*(location.ID)] = &location
+	s.locationsByID[location.ID.V] = &location
 
 	// update connections (if already exist to this entity)
-	vi, ok := s.visitsByLocationID[*(location.ID)]
+	vi, ok := s.visitsByLocationID[location.ID.V]
 	if ok {
 		vi.ApplyToAll(func(visit *model.Visit) {
 			visit.Location = &location
 		})
 	} else {
 		// initialize visitsByLocationID with empty index (to return 0 avg)
-		s.visitsByLocationID[*(location.ID)] = NewVisitIndex()
+		s.visitsByLocationID[location.ID.V] = NewVisitIndex()
 	}
 	return nil
 }
@@ -153,7 +153,7 @@ func (s *Store) GetLocationAvg(id int32, fromDate *int64, toDate *int64, fromAge
 		visits := vi.GetByAgeAndGender(fromDate, toDate, fromAge, toAge, gender)
 		if len(visits) > 0 {
 			for i := range visits {
-				avg += float64(*(visits[i].Mark))
+				avg += float64(visits[i].Mark.V)
 			}
 			avg = avg / float64(len(visits))
 		}
@@ -171,51 +171,51 @@ func (s *Store) UpdateLocationByID(id int32, location model.Location) error {
 	if !ok {
 		return ErrDoesNotExist
 	}
-	if location.ID != nil {
+	if location.ID.Defined {
 		return ErrIDInUpdate
 	}
-	if location.City != nil {
+	if location.City.Defined {
 		l.City = location.City
 	}
-	if location.Country != nil {
+	if location.Country.Defined {
 		l.Country = location.Country
 	}
-	if location.Distance != nil {
+	if location.Distance.Defined {
 		l.Distance = location.Distance
 	}
-	if location.Place != nil {
+	if location.Place.Defined {
 		l.Place = location.Place
 	}
 	return nil
 }
 
 func (s *Store) addVisitToVisitsByLocationID(visit *model.Visit) {
-	vi, ok := s.visitsByLocationID[*(visit.LocationID)]
+	vi, ok := s.visitsByLocationID[visit.LocationID.V]
 	if !ok {
 		vi = NewVisitIndex()
-		s.visitsByLocationID[*(visit.LocationID)] = vi
+		s.visitsByLocationID[visit.LocationID.V] = vi
 	}
 	vi.Add(visit)
 }
 
 func (s *Store) addVisitToVisitsByUserID(visit *model.Visit) {
-	visitIndex, ok := s.visitsByUserID[*(visit.UserID)]
+	visitIndex, ok := s.visitsByUserID[visit.UserID.V]
 	if !ok {
 		visitIndex = NewVisitIndex()
-		s.visitsByUserID[*(visit.UserID)] = visitIndex
+		s.visitsByUserID[visit.UserID.V] = visitIndex
 	}
 	visitIndex.Add(visit)
 }
 
 func (s *Store) updateLocationLink(visit *model.Visit) {
-	location, ok := s.locationsByID[*(visit.LocationID)]
+	location, ok := s.locationsByID[visit.LocationID.V]
 	if ok {
 		visit.Location = location
 	}
 }
 
 func (s *Store) updateUserLink(visit *model.Visit) {
-	user, ok := s.usersByID[*(visit.UserID)]
+	user, ok := s.usersByID[visit.UserID.V]
 	if ok {
 		visit.User = user
 	}
@@ -223,18 +223,18 @@ func (s *Store) updateUserLink(visit *model.Visit) {
 
 // AddVisit adds new visit to the store
 func (s *Store) AddVisit(visit model.Visit) error {
-	if visit.ID == nil || visit.LocationID == nil ||
-		visit.UserID == nil || visit.Mark == nil || visit.VisitedAt == nil {
+	if !visit.ID.Defined || !visit.LocationID.Defined ||
+		!visit.UserID.Defined || !visit.Mark.Defined || !visit.VisitedAt.Defined {
 		return ErrRequiredFields
 	}
 
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	_, ok := s.visitsByID[*(visit.ID)]
+	_, ok := s.visitsByID[visit.ID.V]
 	if ok {
 		return ErrAlreadyExist
 	}
-	s.visitsByID[*(visit.ID)] = &visit
+	s.visitsByID[visit.ID.V] = &visit
 
 	s.addVisitToVisitsByLocationID(&visit)
 	s.addVisitToVisitsByUserID(&visit)
@@ -278,14 +278,14 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 	if !ok {
 		return ErrDoesNotExist
 	}
-	if visit.ID != nil {
+	if visit.ID.Defined {
 		return ErrIDInUpdate
 	}
 
-	if visit.LocationID != nil {
-		if *(v.LocationID) != *(visit.LocationID) {
+	if visit.LocationID.Defined {
+		if v.LocationID.V != visit.LocationID.V {
 			// remove from the old id position
-			vl, ok := s.visitsByLocationID[*(v.LocationID)]
+			vl, ok := s.visitsByLocationID[v.LocationID.V]
 			if ok {
 				vl.Remove(v)
 			}
@@ -297,13 +297,13 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 			s.addVisitToVisitsByLocationID(v)
 		}
 	}
-	if visit.Mark != nil {
+	if visit.Mark.Defined {
 		v.Mark = visit.Mark
 	}
-	if visit.UserID != nil {
-		if *(v.UserID) != *(visit.UserID) {
+	if visit.UserID.Defined {
+		if v.UserID.V != visit.UserID.V {
 			// transfer from one VisitIndex to another
-			vi, ok := s.visitsByUserID[*(v.UserID)]
+			vi, ok := s.visitsByUserID[v.UserID.V]
 			if ok {
 				vi.Remove(v)
 			}
@@ -313,11 +313,11 @@ func (s *Store) UpdateVisitByID(id int32, visit model.Visit) error {
 			s.addVisitToVisitsByUserID(v)
 		}
 	}
-	if visit.VisitedAt != nil {
-		if *(v.VisitedAt) != *(visit.VisitedAt) {
+	if visit.VisitedAt.Defined {
+		if v.VisitedAt.V != visit.VisitedAt.V {
 			// Delete and insert again visit to the VisitIndex (tree rebalancing)
-			vi1, ok1 := s.visitsByUserID[*(v.UserID)]
-			vi2, ok2 := s.visitsByLocationID[*(v.LocationID)]
+			vi1, ok1 := s.visitsByUserID[v.UserID.V]
+			vi2, ok2 := s.visitsByLocationID[v.LocationID.V]
 			if ok1 {
 				vi1.Remove(v)
 			}

@@ -16,9 +16,11 @@ import (
 var dataStore = store.NewStore()
 var now time.Time
 
-const version = 2.21
+const version = 3.0
 
 func main() {
+	//p := profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+
 	log.Infof("Starting version: %f", version)
 
 	router := mux.NewRouter()
@@ -47,6 +49,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop
+	//p.Stop()
 	log.Info("Shutting down the server...")
 	ctx, cn := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cn()

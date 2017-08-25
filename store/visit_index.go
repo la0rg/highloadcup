@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/btree"
 	"github.com/la0rg/highloadcup/model"
+	"github.com/mailru/easyjson/opt"
 )
 
 type VisitIndex struct {
@@ -17,21 +18,20 @@ type VisitItem struct {
 }
 
 func (v VisitItem) Less(then btree.Item) bool {
-	visit := then.(VisitItem)
-	//log.Printf("Compare %v %v %p and %v %v %p", (*(v.VisitedAt)).Unix(), *(v.ID), v.Visit, (*(visit.VisitedAt)).Unix(), *(visit.ID), visit.Visit)
 	// VisitedAt as a main index of the tree
-	return *(v.VisitedAt) < *(visit.VisitedAt) //|| (visit.ID != nil && *(v.ID) < *(visit.ID))
+	// TODO; may be bug in deletion if we have visits with the same timestamp
+	return v.VisitedAt.V < then.(VisitItem).VisitedAt.V
 }
 
 func appendIteratorByCountryAndVisit(listPtr *[]model.Visit, country *string, toDistance *int32) func(item btree.Item) bool {
 	return func(item btree.Item) bool {
 		location := item.(VisitItem).Location
 		// country - название страны, в которой находятся интересующие достопримечательности
-		if country != nil && (location == nil || *(location.Country) != *country) {
+		if country != nil && (location == nil || location.Country.V != *country) {
 			return true
 		}
 		// toDistance - возвращать только те места, у которых расстояние от города меньше этого параметра
-		if toDistance != nil && (location == nil || *(location.Distance) >= *toDistance) {
+		if toDistance != nil && (location == nil || location.Distance.V >= *toDistance) {
 			return true
 		}
 
@@ -45,14 +45,14 @@ func appendIteratorByAgeAndGender(listPtr *[]model.Visit, fromAge *int64, toAge 
 		user := item.(VisitItem).User
 		// fromAge - учитывать только путешественников, у которых возраст (считается от текущего timestamp) строго больше этого параметра
 		// birthdate < timestamp
-		if fromAge != nil && (user == nil || *fromAge <= *(user.BirthDate)) {
+		if fromAge != nil && (user == nil || *fromAge <= user.BirthDate.V) {
 			return true
 		}
 		// birthdate > timestamp
-		if toAge != nil && (user == nil || *(user.BirthDate) <= *toAge) {
+		if toAge != nil && (user == nil || user.BirthDate.V <= *toAge) {
 			return true
 		}
-		if gender != nil && (user == nil || *(user.Gender) != *gender) {
+		if gender != nil && (user == nil || user.Gender.V != *gender) {
 			return true
 		}
 		*listPtr = append(*listPtr, *(item.(VisitItem).Visit))
@@ -77,16 +77,14 @@ func (vi *VisitIndex) get(fromDate *int64, toDate *int64, iter btree.ItemIterato
 	case fromDate == nil && toDate == nil:
 		vi.byDate.Ascend(iter)
 	case fromDate != nil && toDate != nil:
-		from := *fromDate + 1
-		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
-		lessThan := VisitItem{&model.Visit{VisitedAt: toDate}}
+		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: opt.Int64{V: *fromDate + 1, Defined: true}}}
+		lessThan := VisitItem{&model.Visit{VisitedAt: opt.Int64{V: *toDate, Defined: true}}}
 		vi.byDate.AscendRange(greaterOrEqual, lessThan, iter)
 	case fromDate != nil:
-		from := *fromDate + 1
-		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: &from}}
+		greaterOrEqual := VisitItem{&model.Visit{VisitedAt: opt.Int64{V: *fromDate + 1, Defined: true}}}
 		vi.byDate.AscendGreaterOrEqual(greaterOrEqual, iter)
 	case toDate != nil:
-		lessThan := VisitItem{&model.Visit{VisitedAt: toDate}}
+		lessThan := VisitItem{&model.Visit{VisitedAt: opt.Int64{V: *toDate, Defined: true}}}
 		vi.byDate.AscendLessThan(lessThan, iter)
 	}
 }
@@ -98,7 +96,7 @@ func (vi *VisitIndex) GetByCountryAndDistance(fromDate *int64, toDate *int64, co
 	vi.get(fromDate, toDate, appendIteratorByCountryAndVisit(&visits, country, toDistance))
 	userVisits := make([]model.UserVisit, len(visits))
 	for i := range visits {
-		userVisits[i] = model.UserVisit{Visit: visits[i]}
+		userVisits[i] = model.UserVisitFromVisit(visits[i])
 	}
 	return model.UserVisitArray{
 		Visits: userVisits,

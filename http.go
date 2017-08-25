@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -9,10 +8,13 @@ import (
 
 	"github.com/la0rg/highloadcup/store"
 	"github.com/la0rg/highloadcup/util"
+	"github.com/mailru/easyjson"
 
 	"github.com/gorilla/mux"
 	"github.com/la0rg/highloadcup/model"
 )
+
+var emptyObject = []byte("{}")
 
 // User returns a user by id
 func User(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +50,14 @@ func UserUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	errNull := util.ContainsNull(bytes)
+	if errNull {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	var user model.User
-	errParse := json.Unmarshal(bytes, &user)
+	errParse := easyjson.Unmarshal(bytes, &user)
 	if errParse != nil {
 		user = model.User{}
 	}
@@ -69,7 +76,7 @@ func UserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // UserCreate create user entity
@@ -84,7 +91,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user model.User
-	err = json.Unmarshal(bytes, &user)
+	err = easyjson.Unmarshal(bytes, &user)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -95,7 +102,7 @@ func UserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // Location returns a location by id
@@ -176,7 +183,7 @@ func LocationAvg(w http.ResponseWriter, r *http.Request) {
 	avg, ok := dataStore.GetLocationAvg(id, fromDate, toDate, fromAge, toAge, gender)
 	if ok {
 		//avg = util.RoundPlus(avg, 5)
-		err = writeStructAsJSON(w, model.Avg{Value: model.FloatPrec5(avg)})
+		err = writeStructAsJSON(w, model.Avg{Value: avg})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -201,12 +208,18 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	errNull := util.ContainsNull(bytes)
+	if errNull {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	var location model.Location
-	errParse := json.Unmarshal(bytes, &location)
+	errParse := easyjson.Unmarshal(bytes, &location)
 	if errParse != nil {
 		location = model.Location{}
 	}
+
 	err = dataStore.UpdateLocationByID(id, location)
 	if err != nil {
 		if err == store.ErrDoesNotExist {
@@ -221,7 +234,7 @@ func LocationUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // LocationCreate create location entity
@@ -236,7 +249,7 @@ func LocationCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var location model.Location
-	err = json.Unmarshal(bytes, &location)
+	err = easyjson.Unmarshal(bytes, &location)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -247,7 +260,7 @@ func LocationCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // Visit returns a visit by id
@@ -347,9 +360,14 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	errNull := util.ContainsNull(bytes)
+	if errNull {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	var visit model.Visit
-	errParse := json.Unmarshal(bytes, &visit)
+	errParse := easyjson.Unmarshal(bytes, &visit)
 	if errParse != nil {
 		visit = model.Visit{}
 	}
@@ -368,7 +386,7 @@ func VisitUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // VisitCreate create location entity
@@ -383,7 +401,7 @@ func VisitCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var visit model.Visit
-	err = json.Unmarshal(bytes, &visit)
+	err = easyjson.Unmarshal(bytes, &visit)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -394,7 +412,7 @@ func VisitCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Connection", "close")
-	w.Write([]byte("{}"))
+	w.Write(emptyObject)
 }
 
 // NotFound custom request handler for non-found requests
@@ -417,8 +435,8 @@ func parseID(r *http.Request) (int32, error) {
 	return id, nil
 }
 
-func writeStructAsJSON(w http.ResponseWriter, data interface{}) error {
-	b, err := json.Marshal(data)
+func writeStructAsJSON(w http.ResponseWriter, object easyjson.Marshaler) error {
+	b, err := easyjson.Marshal(object)
 	if err != nil {
 		return err
 	}
@@ -426,8 +444,5 @@ func writeStructAsJSON(w http.ResponseWriter, data interface{}) error {
 	w.Header().Add("Content-Length", strconv.Itoa(len(b)))
 	w.Header().Add("Connection", "Keep-Alive")
 	_, err = w.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
