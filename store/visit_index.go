@@ -1,15 +1,13 @@
 package store
 
 import (
-	"sync"
-
 	"github.com/google/btree"
 	"github.com/la0rg/highloadcup/model"
 	"github.com/mailru/easyjson/opt"
 )
 
 type VisitIndex struct {
-	mx     sync.RWMutex
+	//mx     sync.RWMutex
 	byDate *btree.BTree
 }
 
@@ -67,8 +65,8 @@ func NewVisitIndex() *VisitIndex {
 }
 
 func (vi *VisitIndex) Add(visit *model.Visit) {
-	vi.mx.Lock()
-	defer vi.mx.Unlock()
+	//vi.mx.Lock()
+	//defer vi.mx.Unlock()
 	vi.byDate.ReplaceOrInsert(VisitItem{visit})
 }
 
@@ -90,8 +88,8 @@ func (vi *VisitIndex) get(fromDate *int64, toDate *int64, iter btree.ItemIterato
 }
 
 func (vi *VisitIndex) GetByCountryAndDistance(fromDate *int64, toDate *int64, country *string, toDistance *int32) model.UserVisitArray {
-	vi.mx.RLock()
-	defer vi.mx.RUnlock()
+	//vi.mx.RLock()
+	//defer vi.mx.RUnlock()
 	visits := make([]model.Visit, 0)
 	vi.get(fromDate, toDate, appendIteratorByCountryAndVisit(&visits, country, toDistance))
 	userVisits := make([]model.UserVisit, len(visits))
@@ -104,23 +102,23 @@ func (vi *VisitIndex) GetByCountryAndDistance(fromDate *int64, toDate *int64, co
 }
 
 func (vi *VisitIndex) GetByAgeAndGender(fromDate *int64, toDate *int64, fromAge *int64, toAge *int64, gender *string) []model.Visit {
-	vi.mx.RLock()
-	defer vi.mx.RUnlock()
+	//vi.mx.RLock()
+	//defer vi.mx.RUnlock()
 	visits := make([]model.Visit, 0)
 	vi.get(fromDate, toDate, appendIteratorByAgeAndGender(&visits, fromAge, toAge, gender))
 	return visits
 }
 
 func (vi *VisitIndex) Remove(visit *model.Visit) bool {
-	vi.mx.Lock()
-	defer vi.mx.Unlock()
+	//vi.mx.Lock()
+	//defer vi.mx.Unlock()
 	deleted := vi.byDate.Delete(VisitItem{visit})
 	return deleted != nil
 }
 
 func (vi *VisitIndex) ApplyToAll(f func(*model.Visit)) {
-	vi.mx.Lock()
-	defer vi.mx.Unlock()
+	//vi.mx.Lock()
+	//defer vi.mx.Unlock()
 	vi.byDate.Ascend(func(item btree.Item) bool {
 		f(item.(VisitItem).Visit)
 		return true

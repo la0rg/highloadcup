@@ -13,7 +13,7 @@ import (
 var dataStore = store.NewStore()
 var now time.Time
 
-const version = 4.0
+const version = 4.1
 
 func main() {
 	//p := profile.Start(profile.CPUProfile, profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
