@@ -16,7 +16,7 @@ import (
 var dataStore = store.NewStore()
 var now time.Time
 
-const version = 2.2
+const version = 2.21
 
 func main() {
 	log.Infof("Starting version: %f", version)
