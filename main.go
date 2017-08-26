@@ -13,10 +13,10 @@ import (
 var dataStore = store.NewStore()
 var now time.Time
 
-const version = 4.2
+const version = 4.21
 
 func main() {
-	//p := profile.Start(profile.CPUProfile, profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook)
+	//defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
 
 	log.Infof("Starting version: %f", version)
 	router := routing.New()
