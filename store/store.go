@@ -17,16 +17,16 @@ var (
 // Store is an object that keeps all the data (in memory)
 // and provides all the aggregation functions
 type Store struct {
-	usersByID            map[int32]*model.User
 	mxUsersByID          sync.RWMutex
-	visitsByID           map[int32]*model.Visit
 	mxVisitsByID         sync.RWMutex
-	visitsByUserID       map[int32]*VisitIndex
 	mxVisitsByUserID     sync.RWMutex
-	visitsByLocationID   map[int32]*VisitIndex
 	mxVisitsByLocationID sync.RWMutex
-	locationsByID        map[int32]*model.Location
 	mxLocationsByID      sync.RWMutex
+	visitsByUserID       map[int32]*VisitIndex
+	usersByID            map[int32]*model.User
+	visitsByID           map[int32]*model.Visit
+	visitsByLocationID   map[int32]*VisitIndex
+	locationsByID        map[int32]*model.Location
 }
 
 // NewStore constructor

@@ -60,7 +60,7 @@ func appendIteratorByAgeAndGender(listPtr *[]model.Visit, fromAge *int64, toAge 
 
 func NewVisitIndex() *VisitIndex {
 	return &VisitIndex{
-		byDate: btree.New(5),
+		byDate: btree.New(4),
 	}
 }
 
