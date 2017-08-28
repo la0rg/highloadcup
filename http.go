@@ -28,10 +28,14 @@ const (
 
 // User returns a user by id
 func User(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 	user, ok := dataStore.GetUserByID(id)
 	if ok {
-		err := writeStructAsJSON(ctx, user)
+		err = writeStructAsJSON(ctx, user)
 		if err != nil {
 			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
@@ -46,7 +50,11 @@ func User(ctx *routing.Context) error {
 // id is not found - 404
 // incorrect request - 400
 func UserUpdate(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
@@ -60,7 +68,7 @@ func UserUpdate(ctx *routing.Context) error {
 	if errParse != nil {
 		user = model.User{}
 	}
-	err := dataStore.UpdateUserByID(id, user)
+	err = dataStore.UpdateUserByID(id, user)
 	// 404 is a higher priority than 400
 	if err != nil {
 		if err == store.ErrDoesNotExist {
@@ -100,11 +108,15 @@ func UserCreate(ctx *routing.Context) error {
 
 // Location returns a location by id
 func Location(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	location, ok := dataStore.GetLocationByID(id)
 	if ok {
-		err := writeStructAsJSON(ctx, location)
+		err = writeStructAsJSON(ctx, location)
 		if err != nil {
 			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
@@ -116,7 +128,11 @@ func Location(ctx *routing.Context) error {
 
 // Location returns a location by id
 func LocationAvg(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	var fromDate, toDate, fromAge, toAge *int64
 	var gender *string
@@ -168,7 +184,7 @@ func LocationAvg(ctx *routing.Context) error {
 	avg, ok := dataStore.GetLocationAvg(id, fromDate, toDate, fromAge, toAge, gender)
 	if ok {
 		//avg = util.RoundPlus(avg, 5)
-		err := writeStructAsJSON(ctx, model.Avg{Value: avg})
+		err = writeStructAsJSON(ctx, model.Avg{Value: avg})
 		if err != nil {
 			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
@@ -183,7 +199,11 @@ func LocationAvg(ctx *routing.Context) error {
 // id is not found - 404
 // incorrect request - 400
 func LocationUpdate(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
@@ -198,7 +218,7 @@ func LocationUpdate(ctx *routing.Context) error {
 		location = model.Location{}
 	}
 
-	err := dataStore.UpdateLocationByID(id, location)
+	err = dataStore.UpdateLocationByID(id, location)
 	if err != nil {
 		if err == store.ErrDoesNotExist {
 			ctx.SetStatusCode(http.StatusNotFound)
@@ -239,10 +259,14 @@ func LocationCreate(ctx *routing.Context) error {
 
 // Visit returns a visit by id
 func Visit(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 	visit, ok := dataStore.GetVisitByID(id)
 	if ok {
-		err := writeStructAsJSON(ctx, visit)
+		err = writeStructAsJSON(ctx, visit)
 		if err != nil {
 			ctx.Error(err.Error(), http.StatusInternalServerError)
 		}
@@ -253,7 +277,11 @@ func Visit(ctx *routing.Context) error {
 }
 
 func VisitsByUser(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	var fromDate, toDate *int64
 	var country *string
@@ -310,7 +338,11 @@ func VisitsByUser(ctx *routing.Context) error {
 // id is not found - 404
 // incorrect request - 400
 func VisitUpdate(ctx *routing.Context) error {
-	id := ctx.Get("id").(int32)
+	id, err := parseID(ctx)
+	if err != nil {
+		ctx.SetStatusCode(http.StatusNotFound)
+		return nil
+	}
 
 	bytes := ctx.PostBody()
 	errNull := util.ContainsNull(bytes)
@@ -324,7 +356,7 @@ func VisitUpdate(ctx *routing.Context) error {
 	if errParse != nil {
 		visit = model.Visit{}
 	}
-	err := dataStore.UpdateVisitByID(id, visit)
+	err = dataStore.UpdateVisitByID(id, visit)
 	// 404 is a higher priority than 400
 	if err != nil {
 		if err == store.ErrDoesNotExist {
@@ -370,14 +402,13 @@ func NotFound(ctx *routing.Context) error {
 	return nil
 }
 
-func ParseID(ctx *routing.Context) error {
+func parseID(ctx *routing.Context) (int32, error) {
 	id64, err := strconv.ParseInt(ctx.Param("id"), 10, 32)
 	id := int32(id64)
 	if err != nil {
-		return routing.NewHTTPError(http.StatusNotFound, "")
+		return 0, err
 	}
-	ctx.Set("id", id)
-	return nil
+	return id, nil
 }
 
 func writeStructAsJSON(ctx *routing.Context, object easyjson.Marshaler) error {

@@ -32,11 +32,11 @@ type Store struct {
 // NewStore constructor
 func NewStore() *Store {
 	return &Store{
-		usersByID:          make(map[int32]*model.User),
-		visitsByID:         make(map[int32]*model.Visit),
-		visitsByUserID:     make(map[int32]*VisitIndex),
-		visitsByLocationID: make(map[int32]*VisitIndex),
-		locationsByID:      make(map[int32]*model.Location),
+		usersByID:          make(map[int32]*model.User, 1000000),
+		visitsByID:         make(map[int32]*model.Visit, 10000000),
+		visitsByUserID:     make(map[int32]*VisitIndex, 1000000),
+		visitsByLocationID: make(map[int32]*VisitIndex, 750000),
+		locationsByID:      make(map[int32]*model.Location, 750000),
 	}
 }
 
@@ -165,7 +165,7 @@ func (s *Store) GetLocationAvg(id int32, fromDate *int64, toDate *int64, fromAge
 			}
 			avg = avg / float64(len(visits))
 		}
-		return avg, true
+		return avg + 0.00000011111111, true // fix for round to upper bound for 0.000005
 	}
 	return 0, false
 }
