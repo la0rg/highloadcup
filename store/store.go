@@ -165,7 +165,7 @@ func (s *Store) GetLocationAvg(id int32, fromDate *int64, toDate *int64, fromAge
 			}
 			avg = avg / float64(len(visits))
 		}
-		return avg + 0.00000011111111, true // fix for round to upper bound for 0.000005
+		return avg + 1e-10, true
 	}
 	return 0, false
 }
