@@ -17,12 +17,12 @@ var dataStore = store.NewStore()
 var now time.Time
 
 const idLabel = "id"
-const version = 6.0
+const version = 7.0
 
 func main() {
 	//defer profile.Start(profile.MemProfile, profile.ProfilePath(".")).Stop()
 
-	debug.SetGCPercent(50)
+	debug.SetGCPercent(80)
 	log.Infof("Starting version: %f", version)
 
 	now = util.ImportCurrentTimestamp()
@@ -97,6 +97,8 @@ func manualRouting() fasthttp.RequestHandler {
 				}
 				ctx.SetUserValue(idLabel, part2)
 				Visit(ctx)
+			} else {
+				NotFound(ctx)
 			}
 			return
 		}
@@ -134,6 +136,8 @@ func manualRouting() fasthttp.RequestHandler {
 					ctx.SetUserValue(idLabel, part2)
 					VisitUpdate(ctx)
 				}
+			} else {
+				NotFound(ctx)
 			}
 			return
 		}
